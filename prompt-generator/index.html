@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Prompt Atelier — 提示词工坊</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,500;1,600&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       The Prompt Atelier — Dark Gallery Aesthetic
+       暗夜画廊 · 暖金点缀 · 衬线标题 · 画框式卡片
+       ============================================================ */
+
+    :root {
+      --bg-deep:       #09090c;
+      --bg-surface:    #111116;
+      --bg-card:       #16161c;
+      --bg-elevated:   #1c1c24;
+      --bg-code:       #0e0e14;
+      --text-primary:  #e4dfd8;
+      --text-secondary:#a09888;
+      --text-muted:    #6b6460;
+      --gold:          #c49b5c;
+      --gold-light:    #e2c28a;
+      --gold-dim:      #8a6d42;
+      --teal:          #689e9e;
+      --teal-light:    #8ec6c6;
+      --vermillion:    #c2543d;
+      --vermillion-light: #e8735a;
+      --border-subtle: rgba(196, 155, 92, 0.10);
+      --border-active: rgba(196, 155, 92, 0.30);
+      --border-gold:   rgba(196, 155, 92, 0.5);
+      --shadow-sm:     0 1px 3px rgba(0,0,0,0.4);
+      --shadow-md:     0 4px 24px rgba(0,0,0,0.5);
+      --shadow-lg:     0 12px 48px rgba(0,0,0,0.6);
+      --shadow-gold:   0 0 40px rgba(196, 155, 92, 0.08);
+      --radius-sm:      6px;
+      --radius-md:     12px;
+      --radius-lg:     20px;
+      --font-display:  'Playfair Display', 'Noto Serif SC', serif;
+      --font-mono:     'DM Mono', 'JetBrains Mono', monospace;
+      --font-ui:       -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans SC', sans-serif;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: var(--font-ui);
+      background-color: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ---- 背景纹理 ---- */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      opacity: 0.025;
+      background-image:
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 400px 400px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ---- 聚光装饰 ---- */
+    .spotlight {
+      position: fixed;
+      pointer-events: none;
+      z-index: 0;
+      border-radius: 50%;
+      filter: blur(160px);
+      opacity: 0.06;
+    }
+    .spotlight--top {
+      top: -20%;
+      right: -10%;
+      width: 60vw;
+      height: 60vw;
+      background: radial-gradient(circle, var(--gold) 0%, transparent 70%);
+    }
+    .spotlight--bottom {
+      bottom: -15%;
+      left: -10%;
+      width: 50vw;
+      height: 50vw;
+      background: radial-gradient(circle, var(--teal) 0%, transparent 70%);
+      opacity: 0.04;
+    }
+
+    /* ---- 布局 ---- */
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ---- Header ---- */
+    .site-header {
+      text-align: center;
+      padding: 56px 0 40px;
+      position: relative;
+    }
+    .site-header::after {
+      content: '';
+      display: block;
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 28px auto 0;
+    }
+    .site-header h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.2rem, 5vw, 3.2rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    .site-header h1 .accent {
+      color: var(--gold);
+      font-style: italic;
+    }
+    .site-header p {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+    }
+
+    /* ---- Step Section ---- */
+    .step-section {
+      margin-bottom: 52px;
+      animation: sectionIn 0.7s ease both;
+    }
+    .step-section:nth-child(2) { animation-delay: 0.1s; }
+    .step-section:nth-child(3) { animation-delay: 0.2s; }
+    .step-section:nth-child(4) { animation-delay: 0.3s; }
+
+    @keyframes sectionIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-title {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border-active);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--gold);
+      background: rgba(196, 155, 92, 0.06);
+      flex-shrink: 0;
+    }
+
+    /* ---- Style Cards Grid ---- */
+    .style-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .style-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 24px 18px 22px;
+      cursor: pointer;
+      transition: all 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+      position: relative;
+      overflow: hidden;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .style-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(196, 155, 92, 0.06), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+    .style-card:hover {
+      border-color: var(--border-active);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-gold), var(--shadow-md);
+    }
+    .style-card:hover::before { opacity: 1; }
+    .style-card.active {
+      border-color: var(--gold);
+      background: var(--bg-elevated);
+      box-shadow: var(--shadow-gold), 0 0 0 1px rgba(196, 155, 92, 0.2);
+      transform: translateY(-2px);
+    }
+    .style-card.active::before { opacity: 1; }
+    .style-card .style-icon {
+      font-size: 2.4rem;
+      line-height: 1;
+      position: relative;
+      z-index: 1;
+      transition: transform 0.3s ease;
+    }
+    .style-card:hover .style-icon { transform: scale(1.08); }
+    .style-card.active .style-icon { transform: scale(1.1); }
+    .style-card .style-name {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      position: relative;
+      z-index: 1;
+    }
+    .style-card .style-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ---- Config Section ---- */
+    #config-section {
+      display: none;
+    }
+    #config-section.visible {
+      display: block;
+    }
+
+    /* ---- Dimension Block ---- */
+    .dimension-block {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px 22px;
+      margin-bottom: 16px;
+      transition: border-color 0.3s ease;
+    }
+    .dimension-block:hover {
+      border-color: rgba(196, 155, 92, 0.15);
+    }
+    .dim-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .dim-name {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .dim-tip {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.03em;
+    }
+    .badge.required {
+      background: rgba(194, 84, 61, 0.15);
+      color: var(--vermillion-light);
+    }
+    .badge.optional {
+      background: rgba(104, 158, 158, 0.12);
+      color: var(--teal-light);
+    }
+    .multi-hint {
+      font-size: 0.7rem;
+      color: var(--gold);
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: rgba(196, 155, 92, 0.1);
+      letter-spacing: 0.03em;
+    }
+
+    /* ---- Subject Input ---- */
+    .subject-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-code);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      font-family: var(--font-ui);
+      transition: all 0.25s ease;
+      outline: none;
+    }
+    .subject-input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(196, 155, 92, 0.08);
+    }
+    .subject-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* ---- Options Grid ---- */
+    .options-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .option-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: var(--bg-code);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      transition: all 0.22s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .option-chip:hover {
+      border-color: var(--border-active);
+      color: var(--text-primary);
+      background: var(--bg-elevated);
+    }
+    .option-chip.selected {
+      background: rgba(196, 155, 92, 0.12);
+      border-color: var(--gold);
+      color: var(--gold-light);
+      box-shadow: 0 0 12px rgba(196, 155, 92, 0.08);
+    }
+    .opt-tag {
+      font-size: 0.68rem;
+      padding: 1px 6px;
+      border-radius: 10px;
+      background: rgba(104, 158, 158, 0.12);
+      color: var(--teal-light);
+      letter-spacing: 0.02em;
+    }
+
+    /* ---- Result Section ---- */
+    .result-section {
+      animation: sectionIn 0.7s ease 0.35s both;
+    }
+    .prompt-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      margin-bottom: 18px;
+      overflow: hidden;
+      transition: border-color 0.3s ease;
+    }
+    .prompt-block:hover {
+      border-color: var(--border-active);
+    }
+    .prompt-block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .copy-btn {
+      padding: 6px 16px;
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.22s ease;
+      font-family: var(--font-ui);
+      letter-spacing: 0.03em;
+    }
+    .copy-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(196, 155, 92, 0.06);
+    }
+    .copy-btn:active {
+      transform: scale(0.96);
+    }
+    .prompt-output {
+      padding: 18px 20px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.75;
+      color: var(--text-primary);
+      background: var(--bg-code);
+      min-height: 60px;
+      word-break: break-all;
+      letter-spacing: 0.01em;
+    }
+    .prompt-output:empty::after {
+      content: '等待配置...';
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    .prompt-output.negative {
+      color: var(--text-muted);
+    }
+
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120px);
+      background: var(--bg-elevated);
+      border: 1px solid var(--gold);
+      color: var(--gold-light);
+      padding: 12px 28px;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      font-family: var(--font-ui);
+      z-index: 100;
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+      pointer-events: none;
+      box-shadow: var(--shadow-md), 0 0 24px rgba(196, 155, 92, 0.12);
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 900px) {
+      .style-cards-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .style-card .style-icon { font-size: 2rem; }
+      .style-card .style-name { font-size: 0.95rem; }
+    }
+    @media (max-width: 768px) {
+      .container { padding: 32px 16px 60px; }
+      .site-header { padding: 36px 0 28px; }
+      .style-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .style-card { padding: 18px 14px 16px; }
+      .style-card .style-icon { font-size: 1.8rem; }
+      .style-card .style-name { font-size: 0.9rem; }
+      .dim-header { flex-wrap: wrap; }
+      .dim-tip { display: none; }
+      .options-grid { gap: 6px; }
+      .option-chip { padding: 6px 10px; font-size: 0.76rem; }
+    }
+
+    @media (max-width: 480px) {
+      .style-cards-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="spotlight spotlight--top"></div>
+  <div class="spotlight spotlight--bottom"></div>
+
+  <div class="container">
+
+    <header class="site-header">
+      <h1>The Prompt <span class="accent">Atelier</span></h1>
+      <p>文生图 · 提示词工坊</p>
+    </header>
+
+    <!-- Step 1: 选择风格 -->
+    <section class="step-section">
+      <h2 class="step-title">
+        <span class="step-num">01</span> 选择图片风格
+      </h2>
+      <div id="style-cards" class="style-cards-grid"></div>
+    </section>
+
+    <!-- Step 2: 配置参数 -->
+    <section class="step-section" id="config-section">
+      <h2 class="step-title">
+        <span class="step-num">02</span> 配置画面参数
+      </h2>
+      <div id="dimensions-container"></div>
+    </section>
+
+    <!-- Step 3: 生成结果 -->
+    <section class="step-section result-section">
+      <h2 class="step-title">
+        <span class="step-num">03</span> 生成的提示词
+      </h2>
+
+      <div class="prompt-block">
+        <div class="prompt-block-header">
+          <span>✦ 正向提示词</span>
+          <button class="copy-btn" onclick="copyPrompt('positive')">复制</button>
+        </div>
+        <div id="positive-output" class="prompt-output"></div>
+      </div>
+
+      <div class="prompt-block">
+        <div class="prompt-block-header">
+          <span>✧ 反向提示词</span>
+          <button class="copy-btn" onclick="copyPrompt('negative')">复制</button>
+        </div>
+        <div id="negative-output" class="prompt-output negative"></div>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- ============================================================
+       DATA LAYER — 完全数据与逻辑分离
+       ============================================================ -->
+  <script>
+    /* ========== styles.js — 风格类型定义 ========== */
+    const STYLE_TYPES = [
+      {
+        id: 'anime',
+        name: '动漫插画',
+        icon: '🎌',
+        desc: '二次元 · ACG · 日系插画',
+        dimensions: ['artStyle','subject','character','scene','lighting','composition','colorTone','emotion','quality'],
+        promptOrder: ['quality','artStyle','subject','character','scene','lighting','composition','colorTone','emotion'],
+        defaultNegative: 'lowres, bad anatomy, bad hands, missing fingers, extra fingers, blurry, worst quality, low quality, jpeg artifacts',
+      },
+      {
+        id: 'realistic',
+        name: '写实摄影',
+        icon: '📷',
+        desc: '人像 · 风景 · 产品摄影',
+        dimensions: ['subject','scene','lighting','cameraParams','composition','colorTone','skinDetail','emotion','quality'],
+        promptOrder: ['subject','scene','lighting','cameraParams','composition','colorTone','skinDetail','emotion','quality'],
+        defaultNegative: 'cartoon, anime, illustration, painting, drawing, art, render, cgi, blurry, out of focus, bad anatomy, deformed',
+      },
+      {
+        id: 'concept',
+        name: '概念艺术',
+        icon: '🌌',
+        desc: '奇幻 · 科幻 · 史诗场景',
+        dimensions: ['subject','worldSetting','scene','lighting','specialEffect','composition','colorTone','emotion','quality'],
+        promptOrder: ['quality','subject','worldSetting','scene','lighting','specialEffect','composition','colorTone','emotion'],
+        defaultNegative: 'photo, realistic, photograph, blurry, bad anatomy, worst quality, low quality',
+      },
+      {
+        id: 'design',
+        name: '设计风格',
+        icon: '🎨',
+        desc: '海报 · 品牌 · UI 设计',
+        dimensions: ['designType','subject','colorTone','designStyle','layout','emotion','quality'],
+        promptOrder: ['designType','designStyle','subject','colorTone','layout','emotion','quality'],
+        defaultNegative: 'photo, realistic, blurry, noisy, cluttered, messy layout, bad typography',
+      },
+      {
+        id: '3d-render',
+        name: '3D 渲染',
+        icon: '💎',
+        desc: 'C4D · Blender · 产品渲染',
+        dimensions: ['renderEngine','subject','material','lighting','cameraAngle','scene','colorTone','emotion','quality'],
+        promptOrder: ['renderEngine','subject','material','lighting','cameraAngle','scene','colorTone','emotion','quality'],
+        defaultNegative: '2d, painting, drawing, sketch, photo, low resolution, low poly, bad geometry, distorted',
+      },
+      {
+        id: 'ink-painting',
+        name: '水墨国画',
+        icon: '🖌️',
+        desc: '写意 · 工笔 · 东方美学',
+        dimensions: ['inkStyle','subject','brushwork','scene','composition','colorTone','emotion','sealText','quality'],
+        promptOrder: ['inkStyle','subject','brushwork','scene','composition','colorTone','emotion','sealText','quality'],
+        defaultNegative: 'photo, 3d, realistic, western painting, oil painting, cartoon, anime, digital art',
+      },
+      {
+        id: 'pixel-art',
+        name: '像素艺术',
+        icon: '👾',
+        desc: '8-bit · 16-bit · 复古游戏',
+        dimensions: ['pixelStyle','subject','scene','colorPalette','composition','emotion','quality'],
+        promptOrder: ['pixelStyle','subject','scene','colorPalette','composition','emotion','quality'],
+        defaultNegative: 'high resolution, realistic, photo, 3d, smooth, blurry, anti-aliasing',
+      },
+      {
+        id: 'oil-painting',
+        name: '油画艺术',
+        icon: '🖼️',
+        desc: '印象派 · 古典 · 巴洛克',
+        dimensions: ['paintingStyle','subject','brushwork','scene','lighting','composition','colorTone','emotion','quality'],
+        promptOrder: ['paintingStyle','subject','brushwork','scene','lighting','composition','colorTone','emotion','quality'],
+        defaultNegative: 'photo, 3d, digital art, cartoon, anime, flat, vector, low quality',
+      },
+    ];
+
+    /* ========== dimensions.js — 维度元信息 ========== */
+    const DIMENSIONS = {
+      subject:       { id:'subject',       name:'主体描述',   type:'input',        placeholder:'描述画面主体，例如：一个穿红色连衣裙的少女', required:true,  tip:'主体是画面的核心，描述越具体效果越好' },
+      artStyle:      { id:'artStyle',      name:'画风',       type:'single-select', required:true,  tip:'决定整体视觉风格' },
+      character:     { id:'character',     name:'角色细节',   type:'multi-select',  required:false, tip:'可多选，叠加角色特征' },
+      scene:         { id:'scene',         name:'场景背景',   type:'single-select', required:false, tip:'画面所处的环境' },
+      lighting:      { id:'lighting',      name:'光线',       type:'single-select', required:false, tip:'光线对氛围影响极大' },
+      composition:   { id:'composition',   name:'构图视角',   type:'single-select', required:false, tip:'镜头角度和景别' },
+      colorTone:     { id:'colorTone',     name:'色调',       type:'single-select', required:false, tip:'整体色彩倾向' },
+      emotion:       { id:'emotion',       name:'情绪氛围',   type:'single-select', required:false, tip:'画面传达的情感' },
+      quality:       { id:'quality',       name:'质量词',     type:'multi-select',  required:true,  tip:'影响画面精细程度' },
+      cameraParams:  { id:'cameraParams',  name:'摄影参数',   type:'single-select', required:false, tip:'模拟真实相机效果' },
+      skinDetail:    { id:'skinDetail',    name:'皮肤质感',   type:'single-select', required:false, tip:'写实人像专属' },
+      worldSetting:  { id:'worldSetting',  name:'世界观设定', type:'single-select', required:false, tip:'概念艺术的背景世界' },
+      specialEffect: { id:'specialEffect', name:'特效',       type:'multi-select',  required:false, tip:'魔法、粒子等视觉特效' },
+      designType:    { id:'designType',    name:'设计类型',   type:'single-select', required:true,  tip:'海报、图标、UI等' },
+      designStyle:   { id:'designStyle',   name:'设计语言',   type:'single-select', required:false, tip:'极简、包豪斯、赛博朋克等' },
+      layout:        { id:'layout',        name:'版式',       type:'single-select', required:false, tip:'元素的空间排布方式' },
+      // ---- 3D 渲染专属 ----
+      renderEngine:  { id:'renderEngine',  name:'渲染引擎',   type:'single-select', required:true,  tip:'决定3D画面的质感与风格' },
+      material:      { id:'material',      name:'材质质感',   type:'multi-select',  required:false, tip:'可多选组合不同材质效果' },
+      cameraAngle:   { id:'cameraAngle',   name:'相机角度',   type:'single-select', required:false, tip:'3D场景的观察视角' },
+      // ---- 水墨国画专属 ----
+      inkStyle:      { id:'inkStyle',      name:'水墨风格',   type:'single-select', required:true,  tip:'写意或工笔，决定笔墨气韵' },
+      brushwork:     { id:'brushwork',     name:'笔法墨法',   type:'multi-select',  required:false, tip:'线条与墨色的表现技法' },
+      sealText:      { id:'sealText',      name:'题字落款',   type:'single-select', required:false, tip:'印章与书法题字搭配' },
+      // ---- 像素艺术专属 ----
+      pixelStyle:    { id:'pixelStyle',    name:'像素风格',   type:'single-select', required:true,  tip:'不同世代的像素美术风格' },
+      colorPalette:  { id:'colorPalette',  name:'调色板',     type:'single-select', required:false, tip:'限定色板是像素美学的灵魂' },
+      // ---- 油画艺术专属 ----
+      paintingStyle: { id:'paintingStyle', name:'油画流派',   type:'single-select', required:true,  tip:'古典主义、印象派等不同流派' },
+    };
+
+    /* ========== options.js — 选项词库 ========== */
+    const OPTIONS = {
+      artStyle: [
+        { label:'赛璐璐动漫', value:'anime style, cel shading, clean lineart', tag:'标准动漫' },
+        { label:'厚涂插画',   value:'thick paint illustration, painterly style', tag:'绘画感' },
+        { label:'水彩风',     value:'watercolor style, soft edges, transparent colors', tag:'清新' },
+        { label:'像素艺术',   value:'pixel art, 16-bit style', tag:'复古' },
+        { label:'国风工笔',   value:'Chinese traditional painting, gongbi style, ink wash', tag:'国风' },
+        { label:'扁平插画',   value:'flat illustration, vector style, minimal shading', tag:'现代' },
+        { label:'写实动漫',   value:'semi-realistic anime, detailed anime style', tag:'精细' },
+      ],
+      character: [
+        { label:'长发飘逸', value:'long flowing hair' },
+        { label:'双马尾',   value:'twin tails' },
+        { label:'猫耳',     value:'cat ears, nekomimi' },
+        { label:'大眼睛',   value:'big sparkling eyes' },
+        { label:'学生制服', value:'school uniform' },
+        { label:'汉服',     value:'hanfu, traditional Chinese clothing' },
+        { label:'盔甲',     value:'armor, knight armor' },
+        { label:'微笑表情', value:'gentle smile' },
+        { label:'严肃表情', value:'serious expression' },
+      ],
+      scene: [
+        { label:'樱花树下', value:'under cherry blossom trees, sakura petals falling', tag:'春日' },
+        { label:'城市街道', value:'urban street, city background, neon signs', tag:'都市' },
+        { label:'森林深处', value:'deep forest, ancient trees, dappled light', tag:'自然' },
+        { label:'海边日落', value:'beach at sunset, ocean waves, golden sky', tag:'海洋' },
+        { label:'雪山之巅', value:'mountain peak, snow covered, vast sky', tag:'壮阔' },
+        { label:'古典庭院', value:'traditional courtyard, ancient architecture, stone path', tag:'古风' },
+        { label:'赛博都市', value:'cyberpunk city, futuristic buildings, holographic ads', tag:'科幻' },
+        { label:'魔法学院', value:'magic academy, gothic architecture, mystical atmosphere', tag:'奇幻' },
+        { label:'咖啡馆内', value:'cozy cafe interior, warm lighting, wooden furniture', tag:'日常' },
+        { label:'星空旷野', value:'open field under starry night sky, milky way', tag:'夜晚' },
+      ],
+      lighting: [
+        { label:'黄金时段',   value:'golden hour lighting, warm sunlight', tag:'温暖' },
+        { label:'蓝调时刻',   value:'blue hour, twilight lighting, cool tones', tag:'静谧' },
+        { label:'体积光',     value:'volumetric lighting, god rays, light beams', tag:'神圣感' },
+        { label:'霓虹灯光',   value:'neon lighting, colorful neon glow, night light', tag:'赛博' },
+        { label:'烛光',       value:'candlelight, warm flickering light, intimate', tag:'温馨' },
+        { label:'月光',       value:'moonlight, silver light, night atmosphere', tag:'夜晚' },
+        { label:'逆光剪影',   value:'backlight, silhouette, rim lighting', tag:'戏剧' },
+        { label:'漫射软光',   value:'soft diffused light, overcast, even lighting', tag:'柔和' },
+        { label:'丁达尔效应', value:'tyndall effect, light rays through leaves', tag:'森林' },
+        { label:'赛璐璐平光', value:'flat lighting, anime style lighting', tag:'动漫' },
+      ],
+      composition: [
+        { label:'全身正面',   value:'full body, front view' },
+        { label:'半身像',     value:'medium shot, waist up' },
+        { label:'特写面部',   value:'close-up, face focus, portrait' },
+        { label:'仰视角',     value:'low angle shot, looking up' },
+        { label:'俯视角',     value:'bird\'s eye view, top down' },
+        { label:'三分法构图', value:'rule of thirds composition' },
+        { label:'中心对称',   value:'centered composition, symmetrical' },
+        { label:'宽幅远景',   value:'wide shot, establishing shot, panoramic' },
+        { label:'过肩视角',   value:'over the shoulder shot' },
+        { label:'动态构图',   value:'dynamic composition, diagonal lines' },
+      ],
+      colorTone: [
+        { label:'暖橙色调',   value:'warm orange tones, amber color palette' },
+        { label:'冷蓝色调',   value:'cool blue tones, cold color palette' },
+        { label:'莫兰迪色',   value:'muted colors, Morandi color palette, desaturated' },
+        { label:'高饱和鲜艳', value:'vibrant colors, high saturation, vivid' },
+        { label:'黑白灰度',   value:'black and white, monochrome, grayscale' },
+        { label:'粉嫩少女',   value:'pastel colors, soft pink tones, dreamy palette' },
+        { label:'赛博霓虹',   value:'neon colors, cyberpunk palette, purple and cyan' },
+        { label:'复古胶片',   value:'vintage film colors, retro tones, film grain' },
+        { label:'森系绿调',   value:'forest green tones, natural earthy palette' },
+        { label:'高对比黑金', value:'black and gold, high contrast, luxury palette' },
+      ],
+      emotion: [
+        { label:'治愈温暖', value:'warm, cozy, heartwarming atmosphere' },
+        { label:'梦幻唯美', value:'dreamy, ethereal, whimsical, magical' },
+        { label:'史诗壮阔', value:'epic, grand, majestic, awe-inspiring' },
+        { label:'神秘感',   value:'mysterious, enigmatic, dark atmosphere' },
+        { label:'清新自然', value:'fresh, natural, airy, light-hearted' },
+        { label:'孤独忧郁', value:'melancholic, lonely, somber, wistful' },
+        { label:'活力动感', value:'energetic, dynamic, vibrant, exciting' },
+        { label:'宁静祥和', value:'peaceful, serene, tranquil, calm' },
+        { label:'浪漫唯美', value:'romantic, tender, soft, beautiful' },
+        { label:'紧张压迫', value:'tense, ominous, foreboding, dramatic' },
+      ],
+      quality: [
+        { label:'超高清',   value:'ultra-detailed, 8K resolution' },
+        { label:'杰作级',   value:'masterpiece, best quality' },
+        { label:'精细细节', value:'highly detailed, intricate details' },
+        { label:'专业级',   value:'professional, award-winning' },
+        { label:'锐利清晰', value:'sharp focus, crisp' },
+      ],
+      cameraParams: [
+        { label:'人像定焦 85mm',    value:'shot on 85mm lens, f/1.8 aperture, shallow depth of field' },
+        { label:'广角 24mm',        value:'wide angle 24mm lens, environmental context' },
+        { label:'长焦压缩 200mm',   value:'200mm telephoto, compressed perspective, bokeh background' },
+        { label:'微距特写',         value:'macro lens, extreme close-up, fine details' },
+        { label:'胶片相机',         value:'shot on film camera, 35mm film, grain texture' },
+        { label:'专业单反',         value:'DSLR photo, RAW photo, professional camera' },
+      ],
+      skinDetail: [
+        { label:'自然皮肤', value:'natural skin texture, realistic skin' },
+        { label:'精致妆容', value:'flawless skin, professional makeup' },
+        { label:'毛孔质感', value:'visible pores, hyper-realistic skin texture' },
+        { label:'古铜肤色', value:'tanned skin, sun-kissed complexion' },
+      ],
+      worldSetting: [
+        { label:'中世纪奇幻',  value:'medieval fantasy world, magic and swords era' },
+        { label:'赛博朋克2077',value:'cyberpunk dystopia, high tech low life, year 2077' },
+        { label:'蒸汽朋克',    value:'steampunk world, Victorian era, steam-powered machines' },
+        { label:'末世废土',    value:'post-apocalyptic wasteland, ruins, desolate world' },
+        { label:'东方仙侠',    value:'Chinese xianxia world, immortal cultivation, ancient China' },
+        { label:'星际宇宙',    value:'interstellar space, sci-fi universe, space opera' },
+        { label:'克苏鲁神话',  value:'Lovecraftian horror, eldritch world, cosmic horror' },
+      ],
+      specialEffect: [
+        { label:'魔法光效', value:'magical glow, spell effects, arcane energy' },
+        { label:'粒子特效', value:'particle effects, floating particles, sparkles' },
+        { label:'火焰特效', value:'fire effects, flames, burning' },
+        { label:'闪电特效', value:'lightning effects, electric sparks' },
+        { label:'樱花飘落', value:'falling petals, cherry blossom particles' },
+        { label:'冰霜特效', value:'ice and frost effects, frozen crystals' },
+      ],
+      designType: [
+        { label:'海报',       value:'poster design' },
+        { label:'品牌Logo',   value:'logo design, brand identity' },
+        { label:'App图标',    value:'app icon design, iOS icon style' },
+        { label:'名片',       value:'business card design' },
+        { label:'包装设计',   value:'product packaging design' },
+        { label:'UI界面',     value:'UI design, mobile app interface' },
+        { label:'封面设计',   value:'book cover design, magazine cover' },
+      ],
+      designStyle: [
+        { label:'极简主义', value:'minimalist design, clean, lots of white space' },
+        { label:'包豪斯',   value:'Bauhaus style, geometric shapes, primary colors' },
+        { label:'赛博朋克', value:'cyberpunk design, neon colors, dark background' },
+        { label:'新海派',   value:'neubrutalism, bold borders, raw aesthetic' },
+        { label:'玻璃拟态', value:'glassmorphism, frosted glass effect, blur' },
+        { label:'日式简约', value:'Japanese minimalism, zen aesthetic, negative space' },
+        { label:'孟菲斯',   value:'Memphis design, bold patterns, 80s style' },
+      ],
+      layout: [
+        { label:'居中对称', value:'centered layout, symmetrical composition' },
+        { label:'三栏网格', value:'three column grid layout' },
+        { label:'大字排版', value:'large typography, text-dominant layout' },
+        { label:'满版出血', value:'full bleed layout, edge to edge' },
+        { label:'留白极简', value:'generous white space, minimal elements' },
+      ],
+
+      // ===== 3D 渲染专属 =====
+      renderEngine: [
+        { label:'Octane 渲染',   value:'octane render, photorealistic 3D rendering, ray tracing', tag:'写实' },
+        { label:'Blender Cycles',value:'Blender Cycles render, path tracing, physically based', tag:'开源' },
+        { label:'C4D 默认',      value:'Cinema 4D render, clean 3D, smooth shading', tag:'商业' },
+        { label:'Unreal Engine', value:'Unreal Engine 5, real-time rendering, game engine', tag:'实时' },
+        { label:'Pixar 风格',    value:'Pixar style, Disney 3D, soft rounded shapes, charming', tag:'卡通' },
+        { label:'低多面体',      value:'low poly style, flat shading, geometric, minimalist 3D', tag:'极简' },
+        { label:'体素',          value:'voxel art, blocky 3D, Minecraft style', tag:'复古' },
+      ],
+      material: [
+        { label:'光泽金属',   value:'glossy metallic material, reflective surface' },
+        { label:'磨砂哑光',   value:'matte finish, frosted material, soft surface' },
+        { label:'透明玻璃',   value:'glass material, transparent, refractive, caustics' },
+        { label:'陶瓷质感',   value:'ceramic material, porcelain, smooth white surface' },
+        { label:'液态流体',   value:'liquid material, fluid surface, iridescent' },
+        { label:'粗糙石材',   value:'rough stone texture, rocky surface, natural material' },
+        { label:'柔软织物',   value:'fabric material, cloth texture, soft surface' },
+        { label:'霓虹发光',   value:'emissive material, neon glow, self-illuminated' },
+      ],
+      cameraAngle: [
+        { label:'等距视角',   value:'isometric view, 3D isometric, orthographic projection' },
+        { label:'特写镜头',   value:'close-up 3D shot, macro 3D render' },
+        { label:'广角全景',   value:'wide angle 3D scene, establishing shot' },
+        { label:'俯视鸟瞰',   value:'top-down view, bird eye 3D render' },
+        { label:'产品展示角', value:'product shot angle, studio 3D lighting, hero angle' },
+        { label:'动态旋转',   value:'dynamic angle, dramatic perspective, 3-point perspective' },
+      ],
+
+      // ===== 水墨国画专属 =====
+      inkStyle: [
+        { label:'写意山水',   value:'xieyi style, freehand brushwork, expressive ink wash', tag:'豪放' },
+        { label:'工笔花鸟',   value:'gongbi style, meticulous brushwork, fine detail', tag:'精细' },
+        { label:'泼墨大写意', value:'splash ink style, bold ink splashes, abstract expression', tag:'奔放' },
+        { label:'白描线稿',   value:'baimiao style, pure line drawing, no color, ink outline', tag:'素雅' },
+        { label:'没骨画法',   value:'mogu technique, boneless painting, no outlines, soft forms', tag:'柔美' },
+        { label:'浅绛山水',   value:'light umber landscape, subtle colors on ink, classical Chinese', tag:'古典' },
+        { label:'青绿山水',   value:'blue-green landscape, mineral pigments, Tang dynasty style', tag:'重彩' },
+      ],
+      brushwork: [
+        { label:'枯笔飞白',   value:'dry brush strokes, flying white technique, rough texture' },
+        { label:'皴法纹理',   value:'cun texturing technique, mountain texture strokes' },
+        { label:'浓墨重彩',   value:'thick dark ink, bold heavy strokes, intense contrast' },
+        { label:'淡墨清雅',   value:'light ink wash, delicate subtle strokes, elegant' },
+        { label:'线条流畅',   value:'flowing lines, smooth brushwork, calligraphic strokes' },
+        { label:'点厾技法',   value:'dotting technique, stippling brushwork, impressionistic' },
+      ],
+      sealText: [
+        { label:'朱红印章',   value:'red seal stamp, Chinese seal mark, vermillion chop' },
+        { label:'行书题诗',   value:'cursive calligraphy poem inscription, running script' },
+        { label:'楷书落款',   value:'regular script signature, kaishu calligraphy inscription' },
+        { label:'无款无印',   value:'no signature, no seal, pure painting' },
+        { label:'多枚闲章',   value:'multiple collector seals, various red stamps' },
+      ],
+
+      // ===== 像素艺术专属 =====
+      pixelStyle: [
+        { label:'经典 8-bit',   value:'8-bit pixel art, NES style, limited color, chunky pixels', tag:'FC时代' },
+        { label:'华丽 16-bit',  value:'16-bit pixel art, SNES style, rich color, detailed sprites', tag:'SFC时代' },
+        { label:'街机 32-bit',  value:'32-bit pixel art, arcade style, Neo Geo', tag:'街机' },
+        { label:'GameBoy 绿屏', value:'Game Boy style, 4-shade green palette, monochrome pixel', tag:'怀旧' },
+        { label:'等距像素',     value:'isometric pixel art, 2.5D perspective, pixelated', tag:'立体' },
+        { label:'现代高清像素', value:'HD pixel art, modern pixel style, clean sharp pixels', tag:'现代' },
+      ],
+      colorPalette: [
+        { label:'NES 经典色',   value:'NES color palette, limited 56 colors, retro game palette' },
+        { label:'PICO-8 暗色',  value:'PICO-8 palette, 16 colors, dark moody tones' },
+        { label:'GB 四色绿',    value:'Game Boy 4-color green palette, olive monochrome' },
+        { label:'暖色夕阳',     value:'warm sunset pixel palette, orange pink gold' },
+        { label:'赛博霓虹',     value:'cyberpunk neon palette, cyan magenta purple' },
+        { label:'粉彩糖果色',   value:'pastel candy palette, soft pink blue yellow' },
+        { label:'暗黑地牢风',   value:'dark dungeon palette, muted browns grays, low saturation' },
+      ],
+
+      // ===== 油画艺术专属 =====
+      paintingStyle: [
+        { label:'古典写实',     value:'classical realism, Old Master style, chiaroscuro', tag:'学院派' },
+        { label:'印象派',       value:'impressionism style, visible brushstrokes, light and color', tag:'光影' },
+        { label:'后印象派',     value:'post-impressionism, thick paint, expressive color', tag:'表现' },
+        { label:'巴洛克',       value:'Baroque painting, dramatic lighting, rich detail, grandeur', tag:'华丽' },
+        { label:'洛可可',       value:'Rococo style, pastel colors, ornate, playful elegance', tag:'精致' },
+        { label:'浪漫主义',     value:'Romanticism, dramatic emotion, sublime nature, intense', tag:'激情' },
+        { label:'新古典主义',   value:'Neoclassical, clean composition, heroic, balanced', tag:'庄重' },
+      ],
+    };
+  </script>
+
+  <!-- ============================================================
+       LOGIC LAYER
+       ============================================================ -->
+  <script>
+    /* ========== generator.js — 提示词拼接逻辑 ========== */
+    const state = {
+      styleId: null,
+      selections: {},
+      customSubject: '',
+    };
+
+    function generatePrompt() {
+      const style = STYLE_TYPES.find(s => s.id === state.styleId);
+      if (!style) return { positive: '', negative: '' };
+
+      const parts = [];
+
+      style.promptOrder.forEach(dimId => {
+        if (dimId === 'subject') {
+          if (state.customSubject.trim()) {
+            parts.push(state.customSubject.trim());
+          }
+          return;
+        }
+
+        const selection = state.selections[dimId];
+        if (!selection) return;
+
+        if (Array.isArray(selection)) {
+          const values = selection.map(label => {
+            const opt = OPTIONS[dimId]?.find(o => o.label === label);
+            return opt ? opt.value : '';
+          }).filter(Boolean);
+          if (values.length) parts.push(values.join(', '));
+        } else {
+          const opt = OPTIONS[dimId]?.find(o => o.label === selection);
+          if (opt) parts.push(opt.value);
+        }
+      });
+
+      return {
+        positive: parts.join(', '),
+        negative: style.defaultNegative,
+      };
+    }
+
+    /* ========== app.js — 渲染与交互 ========== */
+
+    function renderStyleCards() {
+      const container = document.getElementById('style-cards');
+      container.innerHTML = STYLE_TYPES.map(style => `
+        <div class="style-card" data-id="${style.id}" onclick="selectStyle('${style.id}')">
+          <span class="style-icon">${style.icon}</span>
+          <span class="style-name">${style.name}</span>
+          <span class="style-desc">${style.desc}</span>
+        </div>
+      `).join('');
+    }
+
+    function selectStyle(styleId) {
+      state.styleId = styleId;
+      state.selections = {};
+      state.customSubject = '';
+
+      // 高亮选中卡片
+      document.querySelectorAll('.style-card').forEach(el => {
+        el.classList.toggle('active', el.dataset.id === styleId);
+      });
+
+      const style = STYLE_TYPES.find(s => s.id === styleId);
+      const container = document.getElementById('dimensions-container');
+
+      container.innerHTML = style.dimensions.map(dimId => {
+        const dim = DIMENSIONS[dimId];
+        return renderDimension(dim);
+      }).join('');
+
+      // 显示配置区域
+      const configSection = document.getElementById('config-section');
+      configSection.classList.add('visible');
+      // 触发 animation
+      configSection.style.animation = 'none';
+      configSection.offsetHeight;
+      configSection.style.animation = '';
+
+      updatePreview();
+      // 平滑滚动到配置区
+      configSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function renderDimension(dim) {
+      const requiredBadge = dim.required
+        ? '<span class="badge required">必填</span>'
+        : '<span class="badge optional">可选</span>';
+
+      if (dim.type === 'input') {
+        return `
+          <div class="dimension-block" id="dim-${dim.id}">
+            <div class="dim-header">
+              <span class="dim-name">${dim.name}</span>
+              ${requiredBadge}
+              <span class="dim-tip">${dim.tip}</span>
+            </div>
+            <input
+              type="text"
+              class="subject-input"
+              placeholder="${dim.placeholder}"
+              oninput="onSubjectInput(this.value)"
+              value="${escapeHtml(state.customSubject)}"
+            />
+          </div>
+        `;
+      }
+
+      const opts = OPTIONS[dim.id] || [];
+      const isMulti = dim.type === 'multi-select';
+
+      return `
+        <div class="dimension-block" id="dim-${dim.id}">
+          <div class="dim-header">
+            <span class="dim-name">${dim.name}</span>
+            ${requiredBadge}
+            ${isMulti ? '<span class="multi-hint">可多选</span>' : ''}
+            <span class="dim-tip">${dim.tip}</span>
+          </div>
+          <div class="options-grid">
+            ${opts.map(opt => `
+              <div
+                class="option-chip"
+                data-dim="${dim.id}"
+                data-label="${escapeAttr(opt.label)}"
+                onclick="toggleOption('${dim.id}', '${escapeAttr(opt.label)}', ${isMulti})"
+              >
+                ${opt.label}
+                ${opt.tag ? `<span class="opt-tag">${opt.tag}</span>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function escapeAttr(str) {
+      return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    function toggleOption(dimId, label, isMulti) {
+      if (isMulti) {
+        if (!state.selections[dimId]) state.selections[dimId] = [];
+        const idx = state.selections[dimId].indexOf(label);
+        if (idx > -1) {
+          state.selections[dimId].splice(idx, 1);
+        } else {
+          state.selections[dimId].push(label);
+        }
+      } else {
+        state.selections[dimId] = state.selections[dimId] === label ? null : label;
+      }
+
+      // 更新 UI 高亮
+      const chips = document.querySelectorAll(`[data-dim="${dimId}"]`);
+      chips.forEach(chip => {
+        const isSelected = isMulti
+          ? state.selections[dimId]?.includes(chip.dataset.label)
+          : state.selections[dimId] === chip.dataset.label;
+        chip.classList.toggle('selected', isSelected);
+      });
+
+      updatePreview();
+    }
+
+    function onSubjectInput(value) {
+      state.customSubject = value;
+      updatePreview();
+    }
+
+    function updatePreview() {
+      const { positive, negative } = generatePrompt();
+
+      const posEl = document.getElementById('positive-output');
+      const negEl = document.getElementById('negative-output');
+
+      if (positive) {
+        posEl.textContent = positive;
+      } else {
+        posEl.textContent = '';
+      }
+      negEl.textContent = negative || '';
+    }
+
+    function copyPrompt(type) {
+      const { positive, negative } = generatePrompt();
+      const text = type === 'positive' ? positive : negative;
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('已复制到剪贴板 ✦');
+      }).catch(() => {
+        showToast('复制失败，请手动选择');
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    // ---- 初始化 ----
+    document.addEventListener('DOMContentLoaded', () => {
+      renderStyleCards();
+    });
+  </script>
+
+</body>
+</html>

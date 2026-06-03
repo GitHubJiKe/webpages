@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文案处理工具 — WebPages</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       文案处理工具 — Studio Monospace 风格
+       美学方向: 排字工坊 · 硬朗几何 · 朱红点缀 · 等宽排版
+       ================================================================ */
+
+    :root {
+      --bg:         #fcfcf9;
+      --surface:    #ffffff;
+      --text:       #1d1d1d;
+      --text-muted: #8c8c88;
+      --border:     #e0e0da;
+      --border-strong: #c4c4bc;
+      --accent:     #d94838;
+      --accent-dim: #fef0ee;
+      --accent-glow: rgba(217, 72, 56, 0.15);
+      --radius:     4px;
+      --shadow-sm:  0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md:  0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { height: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ====== 导航栏 ====== */
+    .header {
+      flex-shrink: 0;
+      z-index: 100;
+      background: rgba(252, 252, 249, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-inner {
+      max-width: 1400px; margin: 0 auto;
+      padding: 13px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .back-link {
+      display: flex; align-items: center; gap: 5px;
+      color: var(--text-muted); text-decoration: none;
+      font-size: 13px; font-weight: 500;
+      transition: color 0.2s;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .back-link:hover { color: var(--accent); }
+    .back-link svg { width: 16px; height: 16px; }
+    .header-title {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .header-icon {
+      width: 30px; height: 30px;
+      background: var(--text);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px; font-weight: 500;
+      letter-spacing: -1px;
+    }
+    .header-label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px; font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.2px;
+    }
+    .header-spacer { width: 60px; }
+
+    /* ====== 主布局 ====== */
+    .main {
+      flex: 1; min-height: 0;
+      display: flex; flex-direction: column;
+      max-width: 1400px; width: 100%;
+      margin: 0 auto;
+      padding: 14px 24px 14px;
+      overflow: hidden;
+    }
+
+    /* ====== 顶部操作栏 ====== */
+    .action-bar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 0 12px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+      opacity: 0;
+      animation: fadeUp 0.5s 0.1s ease forwards;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .action-bar .section-label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin-right: 6px;
+    }
+    .action-bar .divider {
+      width: 1px; height: 20px;
+      background: var(--border-strong);
+      margin: 0 6px;
+      flex-shrink: 0;
+    }
+    .action-bar-spacer { flex: 1; min-width: 8px; }
+
+    /* 功能开关按钮 */
+    .toggle-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 7px 14px;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .toggle-btn:hover {
+      border-color: var(--border-strong);
+      color: var(--text);
+    }
+    .toggle-btn.active {
+      background: var(--text);
+      color: #fff;
+      border-color: var(--text);
+    }
+    .toggle-btn .indicator {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--border-strong);
+      transition: background 0.2s;
+    }
+    .toggle-btn.active .indicator {
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent-glow);
+    }
+
+    /* 操作按钮 */
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 7px 14px;
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      outline: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .btn-accent:hover {
+      background: #c94030;
+      border-color: #c94030;
+      box-shadow: 0 2px 10px var(--accent-glow);
+    }
+    .btn-outline {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--border-strong);
+    }
+    .btn-outline:hover {
+      border-color: var(--text);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border-color: transparent;
+      padding: 7px 8px;
+    }
+    .btn-ghost:hover { color: var(--accent); }
+
+    .stats {
+      display: flex; gap: 6px;
+      font-size: 11px; color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+      flex-shrink: 0;
+    }
+    .stats span {
+      padding: 5px 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    /* ====== 编辑器 + 输出 双栏 ====== */
+    .workspace {
+      flex: 1; min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      opacity: 0;
+      animation: fadeUp 0.5s 0.16s ease forwards;
+    }
+    .panel {
+      display: flex; flex-direction: column;
+      min-height: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+    }
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: #fdfdfb;
+    }
+    .panel-label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 2px;
+      color: var(--text-muted);
+    }
+    .panel-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px; color: var(--text-muted);
+    }
+    .text-area {
+      flex: 1; min-height: 0;
+      padding: 16px;
+      border: none;
+      outline: none;
+      resize: none;
+      overflow-y: auto;
+      font-family: 'DM Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--text);
+      background: var(--surface);
+      tab-size: 2;
+      transition: box-shadow 0.2s;
+    }
+    .text-area:focus {
+      box-shadow: inset 0 0 0 2px var(--text);
+    }
+    .text-area::placeholder {
+      color: #c0c0ba;
+      font-family: inherit;
+      font-size: 12px;
+    }
+    .text-area.output {
+      background: #fdfdfb;
+      user-select: all;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .output-empty {
+      display: flex; align-items: center; justify-content: center;
+      height: 100%; min-height: 100px;
+      color: var(--text-muted);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      text-align: center;
+      padding: 24px;
+    }
+
+    /* ====== 滚动条 ====== */
+    .text-area::-webkit-scrollbar {
+      width: 5px; height: 5px;
+    }
+    .text-area::-webkit-scrollbar-track { background: transparent; }
+    .text-area::-webkit-scrollbar-thumb {
+      background: #d8d8d2;
+      border-radius: 3px;
+    }
+    .text-area::-webkit-scrollbar-thumb:hover { background: #c0c0ba; }
+
+    /* ====== Toast ====== */
+    .toast {
+      position: fixed; top: 72px; left: 50%;
+      transform: translateX(-50%);
+      background: #1d1d1d;
+      color: #fcfcf9;
+      padding: 9px 20px;
+      font-size: 13px; font-weight: 500;
+      z-index: 200;
+      border: 1px solid #444;
+      font-family: 'Space Grotesk', sans-serif;
+      letter-spacing: 0.3px;
+      animation: toastIn 0.25s ease, toastOut 0.25s ease 1.5s forwards;
+      pointer-events: none;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    @keyframes toastOut {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
+
+    /* ====== 响应式 ====== */
+    @media (max-width: 780px) {
+      .workspace {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .panel { min-height: 240px; flex: 1 1 0; }
+      .text-area { min-height: 0; }
+      .action-bar { gap: 4px; padding: 4px 0 8px; }
+      .action-bar .divider { display: none; }
+      .toggle-btn { padding: 6px 10px; font-size: 12px; }
+      .btn { padding: 6px 10px; font-size: 12px; }
+      .stats { width: 100%; justify-content: center; margin-top: 4px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ====== 导航栏 ====== -->
+  <header class="header">
+    <div class="header-inner">
+      <a href="../" class="back-link">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        返回
+      </a>
+      <div class="header-title">
+        <div class="header-icon">T</div>
+        <span class="header-label">文案处理</span>
+      </div>
+      <div class="header-spacer"></div>
+    </div>
+  </header>
+
+  <!-- ====== 主内容 ====== -->
+  <main class="main">
+
+    <!-- 顶部操作栏 -->
+    <div class="action-bar" id="actionBar">
+      <span class="section-label">功能</span>
+
+      <button class="toggle-btn active" data-func="splitPunct" id="toggleSplit">
+        <span class="indicator"></span> 按标点换行
+      </button>
+      <button class="toggle-btn" data-func="removeBlank" id="toggleBlank">
+        <span class="indicator"></span> 清除空白行
+      </button>
+      <button class="toggle-btn" data-func="removeBreaks" id="toggleBreaks">
+        <span class="indicator"></span> 清除换行符
+      </button>
+      <button class="toggle-btn" data-func="removePunct" id="togglePunct">
+        <span class="indicator"></span> 清除标点符号
+      </button>
+
+      <span class="divider"></span>
+      <div class="action-bar-spacer"></div>
+
+      <button class="btn btn-outline" id="btnRestore" title="还原到原始文本">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        还原
+      </button>
+      <button class="btn btn-accent" id="btnCopy">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+        </svg>
+        复制结果
+      </button>
+      <button class="btn btn-ghost" id="btnClear" title="清空">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+
+      <span class="divider"></span>
+      <div class="stats">
+        <span id="charCount">字符：0</span>
+        <span id="lineCount">行数：0</span>
+      </div>
+    </div>
+
+    <!-- 编辑 + 输出 -->
+    <div class="workspace">
+      <!-- 输入 -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-label">输入文本</span>
+          <span class="panel-badge" id="inputBadge">原文</span>
+        </div>
+        <textarea
+          id="inputArea"
+          class="text-area"
+          placeholder="粘贴或输入文案…
+
+支持中英文混合文本处理。
+选择上方功能开关，右侧实时预览处理结果。
+
+试试输入一段带标点的长文本、多余空行、或杂乱换行的内容。"
+          spellcheck="false"
+        ></textarea>
+      </div>
+
+      <!-- 输出 -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-label">处理结果</span>
+          <span class="panel-badge" id="outputBadge">实时</span>
+        </div>
+        <div class="text-area output" id="outputArea">
+          <div class="output-empty">选择上方功能开关<br>输入文本后自动处理</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ====== JS ====== -->
+  <script>
+  (function() {
+    'use strict';
+
+    /* ====== DOM 引用 ====== */
+    var inputArea   = document.getElementById('inputArea');
+    var outputArea  = document.getElementById('outputArea');
+    var inputBadge  = document.getElementById('inputBadge');
+    var outputBadge = document.getElementById('outputBadge');
+    var charCount   = document.getElementById('charCount');
+    var lineCount   = document.getElementById('lineCount');
+    var btnRestore  = document.getElementById('btnRestore');
+    var btnCopy     = document.getElementById('btnCopy');
+    var btnClear    = document.getElementById('btnClear');
+    var actionBar   = document.getElementById('actionBar');
+
+    var toggleSplit  = document.getElementById('toggleSplit');
+    var toggleBlank  = document.getElementById('toggleBlank');
+    var toggleBreaks = document.getElementById('toggleBreaks');
+    var togglePunct  = document.getElementById('togglePunct');
+
+    /* ====== 状态 ====== */
+    var originalText = '';     // 保存原始文本用于还原
+    var isSplit      = true;   // 按标点换行（默认开启）
+    var isRemoveBlank = false; // 清除空白行
+    var isRemoveBreaks = false;// 清除换行符
+    var isRemovePunct = false; // 清除标点符号
+
+    /* ====== 文本处理管道 ====== */
+    function processText(input) {
+      if (!input) return '';
+
+      var result = input;
+
+      // 步骤 1：按标点换行
+      if (isSplit) {
+        // 在中英文标点后添加换行
+        result = result.replace(/([。！？；，、：…—\.\!\?;,:，；：])/g, '$1\n');
+        // 合并多余换行（保留段落间距）
+        result = result.replace(/\n{3,}/g, '\n\n');
+        // 移除标点前的多余空格
+        result = result.replace(/[ \t]+\n/g, '\n');
+      }
+
+      // 步骤 2：清除空白行
+      if (isRemoveBlank) {
+        var lines = result.split('\n');
+        lines = lines.filter(function(line) {
+          return line.trim().length > 0;
+        });
+        result = lines.join('\n');
+      }
+
+      // 步骤 3：清除所有换行符
+      if (isRemoveBreaks) {
+        // 将所有换行替换为无（连成一段）
+        result = result.replace(/\n+/g, '');
+      }
+
+      // 步骤 4：清除所有标点符号（在结构处理之后）
+      if (isRemovePunct) {
+        result = result.replace(/[。！？；，、：…—～『』「」""''（）【】《》〈〉\.\!\?;:,"'\-\(\)\[\]\{\}、，；：]/g, '');
+      }
+
+      return result;
+    }
+
+    /* ====== 更新输出 ====== */
+    function updateOutput() {
+      var input = inputArea.value;
+      var output = processText(input);
+
+      if (!input.trim()) {
+        outputArea.innerHTML = '<div class="output-empty">选择上方功能开关<br>输入文本后自动处理</div>';
+        outputBadge.textContent = '就绪';
+        return;
+      }
+
+      // 将处理结果转义后显示
+      var escaped = output
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      outputArea.innerHTML = escaped;
+
+      // 更新 badge
+      var activeFuncs = [];
+      if (isSplit) activeFuncs.push('换行');
+      if (isRemoveBlank) activeFuncs.push('除空');
+      if (isRemoveBreaks) activeFuncs.push('除换');
+      if (isRemovePunct) activeFuncs.push('除标点');
+      outputBadge.textContent = activeFuncs.length > 0 ? activeFuncs.join('+') : '原样';
+
+      updateStats(output);
+    }
+
+    /* ====== 统计信息 ====== */
+    function updateStats(text) {
+      charCount.textContent = '字符：' + (text ? text.length : 0);
+      lineCount.textContent = '行数：' + (text ? text.split('\n').length : 0);
+    }
+
+    /* ====== 保存原始文本 ====== */
+    function saveOriginal() {
+      originalText = inputArea.value;
+      inputBadge.textContent = '原文';
+    }
+
+    /* ====== 输入事件（实时处理） ====== */
+    var debounceTimer = null;
+    inputArea.addEventListener('input', function() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(function() {
+        updateOutput();
+      }, 150);
+    });
+
+    /* ====== 功能开关切换 ====== */
+    actionBar.addEventListener('click', function(e) {
+      var btn = e.target.closest('.toggle-btn');
+      if (!btn) return;
+
+      var func = btn.dataset.func;
+
+      // 切换状态
+      btn.classList.toggle('active');
+
+      if (func === 'splitPunct') {
+        isSplit = btn.classList.contains('active');
+      } else if (func === 'removeBlank') {
+        isRemoveBlank = btn.classList.contains('active');
+      } else if (func === 'removeBreaks') {
+        isRemoveBreaks = btn.classList.contains('active');
+      } else if (func === 'removePunct') {
+        isRemovePunct = btn.classList.contains('active');
+      }
+
+      updateOutput();
+    });
+
+    /* ====== 还原 ====== */
+    btnRestore.addEventListener('click', function() {
+      if (originalText === inputArea.value) {
+        showToast('文本未修改，无需还原');
+        return;
+      }
+      inputArea.value = originalText;
+      inputBadge.textContent = '已还原';
+      updateOutput();
+      inputArea.focus({ preventScroll: true });
+      showToast('已还原到原始文本');
+    });
+
+    /* ====== 复制 ====== */
+    btnCopy.addEventListener('click', function() {
+      var input = inputArea.value.trim();
+      if (!input) { showToast('请先输入文本', true); return; }
+
+      var output = processText(input);
+      if (!output) { showToast('处理结果为空', true); return; }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(output).then(function() {
+          showToast('✓ 已复制处理结果');
+        }).catch(function() {
+          fallbackCopy(output);
+        });
+      } else {
+        fallbackCopy(output);
+      }
+    });
+
+    function fallbackCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed'; ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); showToast('✓ 已复制'); }
+      catch(e) { showToast('复制失败，请手动复制', true); }
+      document.body.removeChild(ta);
+    }
+
+    /* ====== 清空 ====== */
+    btnClear.addEventListener('click', function() {
+      originalText = '';
+      inputArea.value = '';
+      inputBadge.textContent = '原文';
+      outputBadge.textContent = '就绪';
+      outputArea.innerHTML = '<div class="output-empty">选择上方功能开关<br>输入文本后自动处理</div>';
+      updateStats('');
+      inputArea.focus({ preventScroll: true });
+    });
+
+    /* ====== Toast ====== */
+    function showToast(msg, isError) {
+      var existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+
+      var toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = msg;
+      if (isError) {
+        toast.style.background = '#3d2020';
+        toast.style.color = '#f5c6c6';
+        toast.style.borderColor = '#633';
+      }
+      document.body.appendChild(toast);
+      setTimeout(function() {
+        if (toast.parentNode) toast.remove();
+      }, 1800);
+    }
+
+    /* ====== 快捷键 ====== */
+    inputArea.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        btnCopy.click();
+      }
+    });
+
+    /* ====== 初始化 ====== */
+    updateStats('');
+    // 自动保存原文（用户粘贴或输入时触发）
+    inputArea.addEventListener('focus', function() {
+      if (!originalText && inputArea.value) {
+        saveOriginal();
+      }
+    });
+    inputArea.addEventListener('blur', function() {
+      if (inputArea.value && !originalText) {
+        saveOriginal();
+      }
+    });
+
+  })();
+  </script>
+</body>
+</html>

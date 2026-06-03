@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebPages — 精品工具站</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       WebPages — Warm Editorial / Curated Gallery 风格
+       美学方向: 暖纸质感 · 衬线排版 · 交错入场 · 手工细节
+       ================================================================ */
+
+    /* ---------- CSS 变量 ---------- */
+    :root {
+      --paper:        #faf6f1;
+      --paper-deep:   #f3ede4;
+      --card:         #ffffff;
+      --text:         #2c2416;
+      --text-muted:   #8c7b65;
+      --border:       #e8dccd;
+      --accent:       #c9654b;
+      --accent-glow:  #f0d5c9;
+      --sage:         #5b7b5e;
+      --sage-light:   #e8f0e5;
+      --gold:         #b8954a;
+      --gold-light:   #faf3e0;
+      --shadow-sm:    0 1px 3px rgba(44, 36, 22, 0.05);
+      --shadow-md:    0 4px 20px rgba(44, 36, 22, 0.07);
+      --shadow-lg:    0 12px 40px rgba(44, 36, 22, 0.10);
+      --radius-sm:    10px;
+      --radius-md:    16px;
+      --radius-lg:    24px;
+    }
+
+    /* ---------- Reset & Base ---------- */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; height: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      background-color: var(--paper);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+    }
+
+    /* ---------- 噪点纹理叠加层 ---------- */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+      background-size: 256px 256px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* ---------- 装饰性斜线 ---------- */
+    .decorative-line {
+      position: absolute;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .decorative-line.top-right {
+      top: -60px; right: -40px;
+      width: 300px; height: 300px;
+      border: 2px dashed var(--border);
+      border-radius: 50%;
+      opacity: 0.4;
+      transform: rotate(-15deg);
+    }
+
+    /* ---------- 布局容器 ---------- */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ---------- 导航栏 ---------- */
+    .header {
+      flex-shrink: 0;
+      z-index: 100;
+      background: rgba(250, 246, 241, 0.75);
+      backdrop-filter: blur(16px) saturate(120%);
+      -webkit-backdrop-filter: blur(16px) saturate(120%);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+    }
+    .logo-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .logo-mark {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--gold) 100%);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px;
+      font-weight: 700;
+      font-style: italic;
+      box-shadow: 0 2px 12px rgba(201, 101, 75, 0.25);
+    }
+    .logo-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-link {
+      font-size: 14px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.25s;
+      letter-spacing: 0.2px;
+    }
+    .nav-link:hover { color: var(--accent); }
+
+    /* ---------- 主内容区 ---------- */
+    .main {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .main > .container {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      padding: 24px 24px 0;
+    }
+
+    /* ---------- 标题区 ---------- */
+    .hero {
+      text-align: center;
+      margin-bottom: 20px;
+      flex-shrink: 0;
+    }
+    .hero .kicker,
+    .hero h1,
+    .hero p { visibility: hidden; }
+    .hero h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.1;
+    }
+    .hero h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+    .hero p {
+      font-size: 14px;
+      color: var(--text-muted);
+      max-width: 500px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    .hero .kicker {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--accent);
+      margin-bottom: 10px;
+      padding: 3px 10px;
+      border: 1px solid var(--accent-glow);
+      border-radius: 20px;
+      background: rgba(201, 101, 75, 0.04);
+    }
+
+    /* ---------- 搜索栏 ---------- */
+    .search-section {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+      visibility: hidden;
+    }
+    .search-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 440px;
+    }
+    .search-wrapper svg {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px; height: 18px;
+      color: var(--text-muted);
+      transition: color 0.25s;
+    }
+    .search-input {
+      width: 100%;
+      padding: 10px 14px 10px 40px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--card);
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: all 0.3s;
+      box-shadow: var(--shadow-sm);
+      font-family: inherit;
+    }
+    .search-input::placeholder { color: #bfb3a2; }
+    .search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow-md);
+    }
+    .search-input:focus ~ svg,
+    .search-wrapper:focus-within svg { color: var(--accent); }
+
+    /* ---------- 分类标签 ---------- */
+    .tag-section {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+    }
+    .tag-section .tag-btn { visibility: hidden; }
+    .tag-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.25s;
+      font-family: inherit;
+      box-shadow: var(--shadow-sm);
+    }
+    .tag-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(201, 101, 75, 0.03);
+    }
+    .tag-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 2px 12px rgba(201, 101, 75, 0.3);
+    }
+
+    /* ---------- 卡片网格（可滚动区域） ---------- */
+    .card-grid {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      grid-auto-rows: min-content;
+      align-content: start;
+      gap: 14px;
+      padding-bottom: 16px;
+    }
+    .card-grid::-webkit-scrollbar {
+      width: 5px;
+    }
+    .card-grid::-webkit-scrollbar-track { background: transparent; }
+    .card-grid::-webkit-scrollbar-thumb {
+      background: #d8d0c4;
+      border-radius: 3px;
+    }
+
+    .card {
+      display: block;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      visibility: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 3px;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--gold) 100%);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--accent-glow);
+    }
+    .card:hover::before { transform: scaleX(1); }
+    .card.hidden-by-search { display: none; }
+
+    .card-icon {
+      width: 36px; height: 36px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      font-family: 'DM Mono', 'Courier New', monospace;
+      font-weight: 500;
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .card:hover .card-icon { transform: scale(1.1) rotate(-3deg); }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+    .card-head h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0;
+      letter-spacing: -0.2px;
+      white-space: nowrap;
+    }
+
+    .card-icon.json  { background: linear-gradient(135deg, #fdf2ed, #fce4d8); color: var(--accent); }
+    .card-icon.write { background: linear-gradient(135deg, #e8f2ed, #d5e8dc); color: var(--sage); }
+    .card-icon.text  { background: linear-gradient(135deg, #f2f2f2, #e0e0da); color: #1d1d1d; }
+    .card-icon.ppt   { background: linear-gradient(135deg, #faf3e0, #f0dfb8); color: #b8954a; }
+    .card-icon.prompt { background: linear-gradient(135deg, #1a1a24, #24243a); color: #c49b5c; }
+    .card-icon.soon   { background: var(--paper-deep); color: var(--text-muted); }
+
+    .card p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin: 0;
+    }
+    .card-tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+    }
+    .card-tag.dev  { background: var(--accent-glow); color: var(--accent); }
+    .card-tag.write{ background: var(--sage-light); color: var(--sage); }
+    .card-tag.text { background: #f2f2f2; color: #555; }
+    .card-tag.ppt  { background: var(--gold-light); color: var(--gold); }
+    .card-tag.prompt { background: rgba(196, 155, 92, 0.12); color: #b8954a; }
+    .card-tag.soon   { background: var(--paper-deep); color: var(--text-muted); }
+
+    /* 占位卡片特殊样式 */
+    .card.placeholder {
+      background: var(--paper-deep);
+      border: 2px dashed var(--border);
+      cursor: default;
+      box-shadow: none;
+    }
+    .card.placeholder::before { display: none; }
+    .card.placeholder:hover {
+      transform: none;
+      border-color: var(--border);
+      box-shadow: none;
+    }
+
+    /* ---------- 页脚 ---------- */
+    .footer {
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+      padding: 14px 0;
+      text-align: center;
+      visibility: hidden;
+    }
+    .footer p {
+      font-size: 13px;
+      color: var(--text-muted);
+      letter-spacing: 0.3px;
+    }
+    .footer .divider {
+      display: inline-block;
+      margin: 0 10px;
+      opacity: 0.4;
+    }
+
+    /* ---------- 响应式 ---------- */
+    @media (max-width: 640px) {
+      .card-grid { grid-template-columns: 1fr; gap: 10px; }
+      .main > .container { padding: 16px 16px 0; }
+      .hero { margin-bottom: 14px; }
+      .tag-section { gap: 4px; margin-bottom: 10px; }
+      .tag-btn { padding: 5px 12px; font-size: 11px; }
+      .card { padding: 14px; }
+      .header-inner { padding: 10px 0; }
+      .modal-panel { margin: 20px; padding: 28px 24px; }
+    }
+
+    /* ---------- 弹窗 ---------- */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(44, 36, 22, 0.35);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.open {
+      opacity: 1; pointer-events: auto;
+    }
+    .modal-panel {
+      background: var(--card);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-lg);
+      padding: 36px 32px;
+      max-width: 440px; width: 100%;
+      transform: translateY(12px);
+      transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+    }
+    .modal-overlay.open .modal-panel { transform: translateY(0); }
+    .modal-panel h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 26px; font-weight: 600;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .modal-panel p {
+      font-size: 14px; color: var(--text-muted);
+      line-height: 1.7; margin-bottom: 8px;
+    }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: color 0.2s;
+      padding: 0;
+      line-height: 1;
+    }
+    .modal-close:hover { color: var(--accent); }
+    .modal-close svg { width: 18px; height: 18px; stroke-width: 1.5; }
+    .modal-panel .email-box {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: var(--paper-deep);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-family: 'DM Mono', monospace;
+      font-size: 14px; color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .email-box:hover { border-color: var(--accent); }
+    .email-box .copy-hint {
+      margin-left: auto;
+      font-size: 11px; color: var(--text-muted);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ====== 导航栏 ====== -->
+  <header class="header">
+    <div class="container header-inner">
+      <a href="/" class="logo-link">
+        <div class="logo-mark">W</div>
+        <span class="logo-text">WebPages</span>
+      </a>
+      <nav class="nav-links">
+        <a href="javascript:void(0)" class="nav-link" onclick="openModal('about')">关于</a>
+        <a href="javascript:void(0)" class="nav-link" onclick="openModal('feedback')">反馈</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ====== 主内容区 ====== -->
+  <main class="main">
+    <div class="container">
+
+      <!-- 标题区 -->
+      <section class="hero">
+        <span class="kicker">Curated Tools</span>
+        <h1>精品<em>工具站</em></h1>
+        <p>纯静态 · 无追踪 · 即开即用<br>精选实用在线工具，每一个都用心打磨</p>
+      </section>
+
+      <!-- 搜索栏 -->
+      <section class="search-section">
+        <div class="search-wrapper">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input
+            id="searchInput"
+            type="text"
+            class="search-input"
+            placeholder="搜索工具..."
+          >
+        </div>
+      </section>
+
+      <!-- 分类标签 -->
+      <section class="tag-section" id="tagContainer">
+        <button class="tag-btn active" data-tag="all">全部</button>
+        <button class="tag-btn" data-tag="开发">开发</button>
+        <button class="tag-btn" data-tag="文本">文本</button>
+        <button class="tag-btn" data-tag="写作">写作</button>
+        <button class="tag-btn" data-tag="编码">编码</button>
+        <button class="tag-btn" data-tag="图像">图像</button>
+        <button class="tag-btn" data-tag="时间">时间</button>
+      </section>
+
+      <!-- 工具卡片网格 -->
+      <section id="toolGrid" class="card-grid">
+
+        <!-- JSON 格式化 -->
+        <a href="json-formatter/" class="card">
+          <div class="card-top">
+            <div class="card-icon json">{ }</div>
+            <div class="card-head">
+              <h3>JSON 格式化</h3>
+              <span class="card-tag dev">开发</span>
+            </div>
+          </div>
+          <p>格式化、压缩、校验 JSON 数据，支持语法高亮和错误定位</p>
+        </a>
+
+        <!-- Markdown 转公众号 -->
+        <a href="md-to-wechat/" class="card">
+          <div class="card-top">
+            <div class="card-icon write">✎</div>
+            <div class="card-head">
+              <h3>公众号排版</h3>
+              <span class="card-tag write">写作</span>
+            </div>
+          </div>
+          <p>Markdown 一键转公众号富文本，四套精美模板实时预览，兼顾暗黑模式读者</p>
+        </a>
+
+        <!-- 文案处理 -->
+        <a href="text-processor/" class="card">
+          <div class="card-top">
+            <div class="card-icon text">T</div>
+            <div class="card-head">
+              <h3>文案处理</h3>
+              <span class="card-tag text">文本</span>
+            </div>
+          </div>
+          <p>按标点换行、清除空白行、清理换行符，功能可叠加使用，实时预览结果</p>
+        </a>
+
+        <!-- Markdown 演示文稿 -->
+        <a href="md-to-ppt/" class="card">
+          <div class="card-top">
+            <div class="card-icon ppt">▶</div>
+            <div class="card-head">
+              <h3>演示文稿</h3>
+              <span class="card-tag ppt">写作</span>
+            </div>
+          </div>
+          <p>Markdown 一键生成 PPT 幻灯片，4套主题×3种 GSAP 过渡，全屏演示+激光笔</p>
+        </a>
+
+        <!-- 提示词生成器 -->
+        <a href="prompt-generator/" class="card">
+          <div class="card-top">
+            <div class="card-icon prompt">✦</div>
+            <div class="card-head">
+              <h3>提示词工坊</h3>
+              <span class="card-tag prompt">AI</span>
+            </div>
+          </div>
+          <p>文生图提示词一键生成，四种风格×多维参数，实时拼接专业 prompt</p>
+        </a>
+
+        <div class="card placeholder">
+          <div class="card-top">
+            <div class="card-icon soon">💡</div>
+            <div class="card-head">
+              <h3 style="color: var(--text-muted);">有想法？</h3>
+              <span class="card-tag soon">敬请期待</span>
+            </div>
+          </div>
+          <p>如果你有想要的工具，欢迎告诉我们</p>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ====== 页脚 ====== -->
+  <footer class="footer">
+    <div class="container">
+      <p>
+        WebPages <span class="divider">·</span> 纯静态工具站 <span class="divider">·</span> 无服务器 <span class="divider">·</span> 无追踪 <span class="divider">·</span> <span id="currentYear"></span>
+      </p>
+    </div>
+  </footer>
+
+  <!-- GSAP -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.15/dist/gsap.min.js"></script>
+
+  <!-- ====== 弹窗 ====== -->
+  <div class="modal-overlay" id="modalAbout" onclick="closeModal('about')">
+    <div class="modal-panel" style="position:relative" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal('about')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <h2>关于 WebPages</h2>
+      <p>WebPages 是一个精心策划的<strong>纯静态在线工具站</strong>——无服务器、无追踪、即开即用。</p>
+      <p>每一个工具都经过细致打磨，从排版到交互，追求「好用」与「好看」的平衡。所有数据都在浏览器本地处理，不会上传到任何服务器。</p>
+      <p style="color: var(--accent); font-weight: 500;">工具会持续更新，欢迎常来看看。</p>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalFeedback" onclick="closeModal('feedback')">
+    <div class="modal-panel" style="position:relative" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal('feedback')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <h2>反馈 & 联系</h2>
+      <p>有想要的功能？发现 bug？或者只是想打个招呼？</p>
+      <p>欢迎邮件联系，每条反馈我都会认真阅读。</p>
+      <div class="email-box" onclick="copyEmail()" title="点击复制">
+        ypf9319@gmail.com
+        <span class="copy-hint" id="copyHint">点击复制</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 内联 JS ====== -->
+  <script>
+    // 年份
+    document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+    // ===== 弹窗 =====
+    function openModal(name) {
+      var overlay = document.getElementById(name === 'about' ? 'modalAbout' : 'modalFeedback');
+      overlay.classList.add('open');
+    }
+    function closeModal(name) {
+      var overlay = document.getElementById(name === 'about' ? 'modalAbout' : 'modalFeedback');
+      overlay.classList.remove('open');
+    }
+    // ESC 关闭
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeModal('about');
+        closeModal('feedback');
+      }
+    });
+    // 复制邮箱
+    function copyEmail() {
+      var email = 'ypf9319@gmail.com';
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(email).then(function() {
+          var hint = document.getElementById('copyHint');
+          hint.textContent = '✓ 已复制';
+          hint.style.color = '#618774';
+          setTimeout(function() { hint.textContent = '点击复制'; hint.style.color = ''; }, 1500);
+        });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = email; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        var hint = document.getElementById('copyHint');
+        hint.textContent = '✓ 已复制';
+        setTimeout(function() { hint.textContent = '点击复制'; }, 1500);
+      }
+    }
+
+    // ===== 搜索功能 =====
+    const searchInput = document.getElementById('searchInput');
+    const toolCards = document.querySelectorAll('#toolGrid .card');
+
+    searchInput.addEventListener('input', function() {
+      const query = this.value.toLowerCase().trim();
+      toolCards.forEach(function(card) {
+        const title = (card.querySelector('h3')?.textContent || '').toLowerCase();
+        const desc = (card.querySelector('p')?.textContent || '').toLowerCase();
+        const tag = (card.querySelector('.card-tag')?.textContent || '').toLowerCase();
+        if (!query || title.includes(query) || desc.includes(query) || tag.includes(query)) {
+          card.classList.remove('hidden-by-search');
+        } else {
+          card.classList.add('hidden-by-search');
+        }
+      });
+    });
+
+    // ===== 标签筛选 =====
+    const tagButtons = document.querySelectorAll('#tagContainer .tag-btn');
+
+    tagButtons.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        // 切换激活态
+        tagButtons.forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+
+        const selectedTag = btn.dataset.tag;
+
+        toolCards.forEach(function(card) {
+          if (selectedTag === 'all') {
+            card.classList.remove('hidden-by-search');
+            return;
+          }
+          const cardTags = card.querySelectorAll('.card-tag');
+          let match = false;
+          cardTags.forEach(function(t) {
+            if (t.textContent.trim() === selectedTag) match = true;
+          });
+          if (match) {
+            card.classList.remove('hidden-by-search');
+          } else {
+            card.classList.add('hidden-by-search');
+          }
+        });
+
+        // 清空搜索框
+        searchInput.value = '';
+      });
+    });
+
+    // ===== GSAP 入场动画 =====
+    (function() {
+      // 设置初始状态（不可见 + 偏移）
+      gsap.set('.hero .kicker',          { autoAlpha: 0, y: 16, scale: 0.9 });
+      gsap.set('.hero h1',               { autoAlpha: 0, y: 24 });
+      gsap.set('.hero p',                { autoAlpha: 0, y: 14 });
+      gsap.set('.search-section',        { autoAlpha: 0, y: 12 });
+      gsap.set('#tagContainer .tag-btn', { autoAlpha: 0, y: 8, scale: 0.9 });
+      gsap.set('#toolGrid .card',        { autoAlpha: 0, y: 28, scale: 0.96 });
+      gsap.set('.footer',                { autoAlpha: 0, y: 6 });
+
+      // 时间线动画
+      var tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+      tl.to('.hero .kicker',          { autoAlpha: 1, y: 0, scale: 1, duration: 0.5 })
+        .to('.hero h1',               { autoAlpha: 1, y: 0, duration: 0.6 }, '-=0.3')
+        .to('.hero p',                { autoAlpha: 1, y: 0, duration: 0.5 }, '-=0.35')
+        .to('.search-section',        { autoAlpha: 1, y: 0, duration: 0.45 }, '-=0.25')
+        .to('#tagContainer .tag-btn', { autoAlpha: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.04 }, '-=0.15')
+        .to('#toolGrid .card',        { autoAlpha: 1, y: 0, scale: 1, duration: 0.5, stagger: 0.06, ease: 'back.out(1.2)' }, '-=0.1')
+        .to('.footer',                { autoAlpha: 1, y: 0, duration: 0.4 }, '-=0.2');
+    })();
+  </script>
+</body>
+</html>
