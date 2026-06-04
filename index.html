@@ -373,6 +373,8 @@
     .card-icon.write { background: linear-gradient(135deg, #e8f2ed, #d5e8dc); color: var(--sage); }
     .card-icon.text  { background: linear-gradient(135deg, #f2f2f2, #e0e0da); color: #1d1d1d; }
     .card-icon.ppt   { background: linear-gradient(135deg, #faf3e0, #f0dfb8); color: #b8954a; }
+    .card-icon.qr    { background: linear-gradient(135deg, #e8f7ff, #cceeff); color: #0066aa; }
+    .card-icon.color { background: linear-gradient(135deg, #fdf2ed, #fce4d8); color: var(--accent); }
     .card-icon.prompt { background: linear-gradient(135deg, #1a1a24, #24243a); color: #c49b5c; }
     .card-icon.soon   { background: var(--paper-deep); color: var(--text-muted); }
 
@@ -395,6 +397,8 @@
     .card-tag.write{ background: var(--sage-light); color: var(--sage); }
     .card-tag.text { background: #f2f2f2; color: #555; }
     .card-tag.ppt  { background: var(--gold-light); color: var(--gold); }
+    .card-tag.qr     { background: rgba(0, 102, 170, 0.1); color: #0066aa; }
+    .card-tag.color  { background: var(--accent-glow); color: var(--accent); }
     .card-tag.prompt { background: rgba(196, 155, 92, 0.12); color: #b8954a; }
     .card-tag.soon   { background: var(--paper-deep); color: var(--text-muted); }
 
@@ -628,15 +632,29 @@
           <p>文生图提示词一键生成，四种风格×多维参数，实时拼接专业 prompt</p>
         </a>
 
-        <div class="card placeholder">
+        <!-- 二维码生成器 -->
+        <a href="qr-generator/" class="card">
           <div class="card-top">
-            <div class="card-icon soon">💡</div>
+            <div class="card-icon qr">▣</div>
             <div class="card-head">
-              <h3 style="color: var(--text-muted);">有想法？</h3>
-              <span class="card-tag soon">敬请期待</span>
+              <h3>二维码生成</h3>
+              <span class="card-tag qr">图像</span>
             </div>
           </div>
-          <p>如果你有想要的工具，欢迎告诉我们</p>
+          <p>支持7种内容类型，自定义码点样式/颜色/Logo，扫描线动画，一键下载PNG</p>
+        </a>
+
+        <!-- 颜色工具箱 -->
+        <a href="color-toolbox/" class="card">
+          <div class="card-top">
+            <div class="card-icon color">◐</div>
+            <div class="card-head">
+              <h3>颜色工具箱</h3>
+              <span class="card-tag color">设计</span>
+            </div>
+          </div>
+          <p>取色器·色彩调和·主题色板(一键复制CSS)·渐变工坊·图片取色·格式转换</p>
+        </a>
         </div>
 
       </section>

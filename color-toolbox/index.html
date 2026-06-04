@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chromatic Atelier — 颜色工具箱</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       Chromatic Atelier — 颜色工具箱
+       
+       ✦ Artist's Color Studio ✦
+       Warm dark atelier · Glass panels · Palette cards
+       CSS-ready theme palettes · Gradient builder · Extractor
+       ============================================================ */
+
+    :root {
+      --bg:        #0f0f15;
+      --surface:   #16161f;
+      --card:      #1c1c28;
+      --elevated:  #222230;
+      --text:      #e8e4dd;
+      --text-secondary:#a09888;
+      --text-muted:#67605a;
+      --accent:    #e8734a;
+      --accent-glow:rgba(232,115,74,0.15);
+      --teal:      #689e9e;
+      --teal-glow: rgba(104,158,158,0.12);
+      --gold:      #c49b5c;
+      --gold-glow: rgba(196,155,92,0.12);
+      --border:    rgba(255,255,255,0.06);
+      --border-active:rgba(232,115,74,0.25);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --font-display:'Cormorant Garamond', 'Noto Serif SC', serif;
+      --font-ui:    'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono:  'JetBrains Mono', monospace;
+    }
+
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html{font-size:16px;scroll-behavior:smooth;}
+    body{
+      font-family:var(--font-ui);
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      line-height:1.65;
+      -webkit-font-smoothing:antialiased;
+      position:relative;
+      overflow-x:hidden;
+    }
+    body::before{
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+      opacity:.02;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size:256px 256px;
+    }
+
+    .container{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:40px 24px 64px;}
+
+    /* ---- Header ---- */
+    .site-header{text-align:center;padding:36px 0 28px;}
+    .site-header h1{
+      font-family:var(--font-display);
+      font-size:clamp(2rem,4vw,2.6rem); font-weight:700;
+      color:var(--text); letter-spacing:-0.01em;
+    }
+    .site-header h1 em{color:var(--accent);font-style:italic;}
+    .site-header p{color:var(--text-secondary);font-size:.9rem;margin-top:4px;}
+
+    /* ---- Tab Navigation ---- */
+    .tab-nav{
+      display:flex; gap:6px; flex-wrap:wrap;
+      background:var(--surface); border-radius:var(--radius-lg);
+      padding:6px; margin-bottom:28px;
+      border:1px solid var(--border);
+    }
+    .tab-btn{
+      flex:1; min-width:fit-content;
+      padding:10px 18px;
+      border-radius:var(--radius-md);
+      border:none; background:transparent;
+      color:var(--text-muted); cursor:pointer;
+      font-family:var(--font-ui); font-size:.82rem; font-weight:500;
+      transition:all .25s ease; white-space:nowrap;
+    }
+    .tab-btn:hover{color:var(--text);background:var(--card);}
+    .tab-btn.active{
+      background:var(--elevated); color:var(--accent);
+      box-shadow:0 2px 12px var(--accent-glow);
+    }
+
+    /* ---- Tab Panels ---- */
+    .tab-panel{display:none; animation:fadeIn .4s ease;}
+    .tab-panel.active{display:block;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+    /* ====== PANEL 1: Color Picker & Harmonies ====== */
+    .picker-layout{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+    .picker-card{
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius-md); padding:24px;
+    }
+    .picker-card h3{
+      font-family:var(--font-display); font-size:1.1rem; font-weight:600;
+      margin-bottom:16px;
+    }
+    .color-picker-area{
+      display:flex; gap:16px; align-items:flex-start;
+    }
+    .big-color-input{
+      width:80px; height:80px; border-radius:var(--radius-md);
+      border:2px solid var(--border); cursor:pointer; padding:0;
+      background:none; flex-shrink:0;
+    }
+    .big-color-input::-webkit-color-swatch-wrapper{padding:0;}
+    .big-color-input::-webkit-color-swatch{border-radius:12px;border:none;}
+    .color-values{
+      display:flex; flex-direction:column; gap:8px; flex:1;
+    }
+    .color-value-row{
+      display:flex; align-items:center; gap:8px;
+    }
+    .color-value-row label{
+      font-size:.75rem; color:var(--text-muted);
+      font-family:var(--font-mono); width:44px; flex-shrink:0;
+    }
+    .color-value-row input{
+      flex:1; padding:8px 10px;
+      background:var(--bg); border:1px solid var(--border);
+      border-radius:var(--radius-sm); color:var(--text);
+      font-family:var(--font-mono); font-size:.8rem;
+      outline:none; transition:border .2s;
+    }
+    .color-value-row input:focus{border-color:var(--accent);}
+    .color-preview-block{
+      margin-top:16px; height:60px; border-radius:var(--radius-sm);
+      transition:background .2s;
+    }
+    .harmony-grid{
+      display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:12px;
+    }
+    .harmony-swatch{
+      aspect-ratio:1; border-radius:var(--radius-sm);
+      cursor:pointer; transition:all .2s; position:relative;
+      border:2px solid transparent;
+    }
+    .harmony-swatch:hover{transform:scale(1.1);z-index:1;}
+    .harmony-swatch.selected{border-color:var(--text);box-shadow:0 0 12px rgba(255,255,255,.15);}
+    .harmony-label{
+      text-align:center;font-size:.7rem;color:var(--text-muted);margin-top:4px;
+      font-family:var(--font-mono);
+    }
+
+    /* ====== PANEL 2: Theme Palettes ====== */
+    .palette-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+    .palette-card{
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius-md); overflow:hidden;
+      transition:all .3s ease; cursor:pointer;
+    }
+    .palette-card:hover{border-color:var(--border-active);transform:translateY(-2px);}
+    .palette-strip{display:flex;height:60px;}
+    .palette-strip div{flex:1;}
+    .palette-info{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;}
+    .palette-name{font-family:var(--font-display);font-size:1rem;font-weight:600;color:var(--text);}
+    .palette-tag{font-size:.7rem;color:var(--text-muted);}
+    .palette-css{
+      background:var(--bg); padding:12px 16px; margin:0 16px 14px;
+      border-radius:var(--radius-sm);
+      font-family:var(--font-mono); font-size:.7rem; color:var(--text-secondary);
+      overflow-x:auto; white-space:pre; line-height:1.8; position:relative;
+    }
+    .palette-css .copy-hint{
+      position:absolute; top:6px; right:10px;
+      font-size:.65rem; color:var(--accent); opacity:0; transition:opacity .3s;
+      font-family:var(--font-ui);
+    }
+    .palette-card:hover .copy-hint{opacity:1;}
+
+    /* ====== PANEL 3: Gradient Studio ====== */
+    .gradient-layout{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+    .grad-preview{
+      grid-column:1/-1; height:140px; border-radius:var(--radius-md);
+      transition:background .3s; border:1px solid var(--border);
+    }
+    .grad-controls{display:flex;flex-direction:column;gap:16px;}
+    .grad-stop{display:flex;align-items:center;gap:10px;}
+    .grad-stop input[type=color]{
+      width:36px;height:36px;border:none;border-radius:var(--radius-sm);cursor:pointer;padding:0;
+    }
+    .grad-stop input[type=color]::-webkit-color-swatch-wrapper{padding:0;}
+    .grad-stop input[type=color]::-webkit-color-swatch{border-radius:6px;border:1px solid var(--border);}
+    .grad-stop input[type=text]{flex:1;}
+    .grad-angle-group{display:flex;align-items:center;gap:10px;}
+    .grad-css-output{
+      grid-column:1/-1; background:var(--bg); padding:14px 16px;
+      border-radius:var(--radius-sm); font-family:var(--font-mono); font-size:.78rem;
+      color:var(--teal); border:1px solid var(--border); position:relative;
+    }
+    .btn-copy{
+      position:absolute; top:8px; right:12px;
+      padding:4px 12px; background:var(--card); border:1px solid var(--border);
+      border-radius:20px; color:var(--text-secondary); cursor:pointer;
+      font-size:.72rem; transition:all .2s; font-family:var(--font-ui);
+    }
+    .btn-copy:hover{border-color:var(--accent);color:var(--accent);}
+
+    /* ====== PANEL 4: Image Extractor ====== */
+    .extract-layout{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+    .drop-zone{
+      border:2px dashed var(--border); border-radius:var(--radius-md);
+      padding:40px; text-align:center; cursor:pointer; transition:all .25s;
+      color:var(--text-muted);
+    }
+    .drop-zone:hover{border-color:var(--teal);color:var(--teal);background:rgba(104,158,158,.04);}
+    .drop-zone.dragover{border-color:var(--accent);background:var(--accent-glow);}
+    .drop-zone img{max-width:100%;max-height:200px;border-radius:var(--radius-sm);margin-top:12px;}
+    .drop-zone input[type=file]{display:none;}
+    .extracted-colors{display:flex;flex-direction:column;gap:8px;}
+    .extracted-swatch{
+      display:flex;align-items:center;gap:12px;padding:10px 14px;
+      background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);
+    }
+    .extracted-swatch .swatch-block{
+      width:40px;height:40px;border-radius:var(--radius-sm);flex-shrink:0;
+    }
+    .extracted-swatch .swatch-info{
+      flex:1;font-family:var(--font-mono);font-size:.78rem;color:var(--text-secondary);
+    }
+    .extracted-swatch .swatch-info span{color:var(--text);}
+
+    /* ====== PANEL 5: Converter ====== */
+    .converter-layout{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
+    }
+    .converter-card{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:var(--radius-md);padding:20px; text-align:center;
+    }
+    .converter-card h3{font-family:var(--font-display);font-size:1rem;margin-bottom:12px;}
+    .converter-card input, .converter-card textarea{
+      width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);
+      border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-mono);
+      font-size:.8rem;outline:none;transition:border .2s;
+    }
+    .converter-card input:focus,.converter-card textarea:focus{border-color:var(--accent);}
+    .conv-preview{
+      margin-top:10px;height:40px;border-radius:var(--radius-sm);transition:background .2s;
+    }
+
+    /* ---- Toast ---- */
+    .toast{
+      position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(120px);
+      background:var(--elevated);border:1px solid var(--accent);color:var(--accent);
+      padding:10px 24px;border-radius:30px;font-size:.85rem;z-index:100;
+      opacity:0;transition:all .3s cubic-bezier(.22,.61,.36,1);pointer-events:none;
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+    /* ---- Responsive ---- */
+    @media(max-width:768px){
+      .container{padding:24px 12px 40px;}
+      .picker-layout,.gradient-layout,.extract-layout{grid-template-columns:1fr;}
+      .converter-layout{grid-template-columns:1fr;}
+      .tab-btn{padding:8px 12px;font-size:.74rem;}
+      .harmony-grid{grid-template-columns:repeat(5,1fr);gap:4px;}
+      .palette-grid{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header class="site-header">
+    <h1>Chromatic <em>Atelier</em></h1>
+    <p>颜色工具箱 · 取色 · 配色 · 渐变 · 提取 · 转换</p>
+  </header>
+
+  <!-- ====== 返回导航 ====== -->
+  <header style="display:flex;align-items:center;justify-content:space-between;padding:0 0 24px;position:relative;z-index:1;">
+    <a href="../" style="display:flex;align-items:center;gap:6px;color:var(--text-muted);text-decoration:none;font-size:.85rem;font-family:var(--font-ui);transition:color .2s;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>返回首页
+    </a>
+    <span style="font-family:var(--font-display);font-size:1.05rem;font-weight:600;color:var(--text);">Chromatic <em style="color:var(--accent);font-style:italic;">Atelier</em></span>
+    <span style="width:80px;"></span>
+  </header>
+
+  <!-- Tab Navigation -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="picker">🎨 取色 & 调和</button>
+    <button class="tab-btn" data-tab="palettes">🎭 主题色板</button>
+    <button class="tab-btn" data-tab="gradient">🌈 渐变工坊</button>
+    <button class="tab-btn" data-tab="extract">🖼️ 图片取色</button>
+    <button class="tab-btn" data-tab="converter">🔄 格式转换</button>
+  </nav>
+
+  <!-- ====== TAB 1: Color Picker & Harmonies ====== -->
+  <div class="tab-panel active" id="panel-picker">
+    <div class="picker-layout">
+      <div class="picker-card">
+        <h3>取色器</h3>
+        <div class="color-picker-area">
+          <input type="color" class="big-color-input" id="main-picker" value="#e8734a" oninput="onMainColorChange()">
+          <div class="color-values">
+            <div class="color-value-row"><label>HEX</label><input type="text" id="val-hex" value="#E8734A" oninput="onHexInput()"></div>
+            <div class="color-value-row"><label>RGB</label><input type="text" id="val-rgb" value="232, 115, 74" oninput="onRgbInput()"></div>
+            <div class="color-value-row"><label>HSL</label><input type="text" id="val-hsl" value="16°, 77%, 60%" oninput="onHslInput()"></div>
+          </div>
+        </div>
+        <div class="color-preview-block" id="main-preview" style="background:#e8734a;"></div>
+      </div>
+
+      <div class="picker-card">
+        <h3>色彩调和</h3>
+        <div class="harmony-grid" id="harmony-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== TAB 2: Theme Palettes ====== -->
+  <div class="tab-panel" id="panel-palettes">
+    <div class="palette-grid" id="palette-grid"></div>
+  </div>
+
+  <!-- ====== TAB 3: Gradient Studio ====== -->
+  <div class="tab-panel" id="panel-gradient">
+    <div class="gradient-layout">
+      <div class="grad-preview" id="grad-preview" style="background:linear-gradient(135deg,#e8734a,#a855f7);"></div>
+      <div class="grad-controls" style="grid-column:1;">
+        <div class="grad-stop">
+          <input type="color" id="grad-color1" value="#e8734a" oninput="updateGradient()">
+          <input type="text" id="grad-color1-hex" value="#E8734A" oninput="updateGradientFromText()" placeholder="起始色">
+        </div>
+        <div class="grad-stop">
+          <input type="color" id="grad-color2" value="#a855f7" oninput="updateGradient()">
+          <input type="text" id="grad-color2-hex" value="#A855F7" oninput="updateGradientFromText()" placeholder="结束色">
+        </div>
+        <select id="grad-type" onchange="updateGradient()" style="padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-ui);">
+          <option value="linear">线性渐变 (Linear)</option>
+          <option value="radial">径向渐变 (Radial)</option>
+          <option value="conic">锥形渐变 (Conic)</option>
+        </select>
+        <div class="grad-angle-group" id="grad-angle-group">
+          <label style="font-size:.78rem;color:var(--text-muted);white-space:nowrap;">角度</label>
+          <input type="range" id="grad-angle" min="0" max="360" value="135" oninput="updateGradient()" style="flex:1;">
+          <span id="grad-angle-val" style="font-family:var(--font-mono);font-size:.8rem;color:var(--text-secondary);">135°</span>
+        </div>
+      </div>
+      <div style="grid-column:1;">
+        <button class="btn-copy" style="position:static;display:inline-block;" onclick="copyGradCSS()">复制 CSS</button>
+        <div class="grad-css-output" id="grad-css" style="margin-top:8px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== TAB 4: Image Extractor ====== -->
+  <div class="tab-panel" id="panel-extract">
+    <div class="extract-layout">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('img-input').click()">
+        <div id="drop-text">
+          <div style="font-size:2rem;margin-bottom:8px;">🖼️</div>
+          点击或拖拽图片到此处<br>
+          <span style="font-size:.75rem;color:var(--text-muted);">支持 JPG / PNG / WebP</span>
+        </div>
+        <input type="file" id="img-input" accept="image/*" onchange="handleImageUpload(event)">
+      </div>
+      <div class="extracted-colors" id="extracted-colors">
+        <div style="color:var(--text-muted);font-size:.85rem;text-align:center;padding:40px 0;">
+          上传图片后自动提取主色调
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== TAB 5: Converter ====== -->
+  <div class="tab-panel" id="panel-converter">
+    <div class="converter-layout">
+      <div class="converter-card">
+        <h3>HEX</h3>
+        <input type="text" id="conv-hex" value="#E8734A" placeholder="#RRGGBB" oninput="convertFrom('hex')">
+        <div class="conv-preview" id="conv-preview-hex" style="background:#e8734a;"></div>
+      </div>
+      <div class="converter-card">
+        <h3>RGB</h3>
+        <input type="text" id="conv-rgb" value="232, 115, 74" placeholder="R, G, B" oninput="convertFrom('rgb')">
+        <div class="conv-preview" id="conv-preview-rgb" style="background:#e8734a;"></div>
+      </div>
+      <div class="converter-card">
+        <h3>HSL</h3>
+        <input type="text" id="conv-hsl" value="16, 77%, 60%" placeholder="H, S%, L%" oninput="convertFrom('hsl')">
+        <div class="conv-preview" id="conv-preview-hsl" style="background:#e8734a;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/* ============================================================
+   Chromatic Atelier — App Logic
+   ============================================================ */
+
+// ---- Tab Switching ----
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab)?.classList.add('active');
+  });
+});
+
+// ====== Color Utilities ======
+function hexToRgb(hex) {
+  hex = hex.replace('#','');
+  if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+  if (hex.length !== 6) return null;
+  return {
+    r: parseInt(hex.substring(0,2), 16),
+    g: parseInt(hex.substring(2,4), 16),
+    b: parseInt(hex.substring(4,6), 16),
+  };
+}
+function rgbToHex(r, g, b) {
+  return '#' + [r,g,b].map(x => {
+    const h = Math.max(0,Math.min(255,Math.round(x))).toString(16);
+    return h.length===1?'0'+h:h;
+  }).join('').toUpperCase();
+}
+function rgbToHsl(r, g, b) {
+  r/=255;g/=255;b/=255;
+  const max=Math.max(r,g,b),min=Math.min(r,g,b);
+  let h=0,s=0,l=(max+min)/2;
+  if(max!==min){
+    const d=max-min;
+    s=l>.5?d/(2-max-min):d/(max+min);
+    switch(max){
+      case r:h=((g-b)/d+(g<b?6:0))/6;break;
+      case g:h=((b-r)/d+2)/6;break;
+      case b:h=((r-g)/d+4)/6;break;
+    }
+  }
+  return {h:Math.round(h*360),s:Math.round(s*100),l:Math.round(l*100)};
+}
+function hslToRgb(h,s,l){
+  h/=360;s/=100;l/=100;
+  if(s===0) return {r:Math.round(l*255),g:Math.round(l*255),b:Math.round(l*255)};
+  const hue2rgb=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};
+  const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q;
+  return {r:Math.round(hue2rgb(p,q,h+1/3)*255),g:Math.round(hue2rgb(p,q,h)*255),b:Math.round(hue2rgb(p,q,h-1/3)*255)};
+}
+
+// ====== TAB 1: Color Picker ======
+function onMainColorChange(){
+  const hex = document.getElementById('main-picker').value;
+  updateFromHex(hex);
+}
+function onHexInput(){
+  const hex = document.getElementById('val-hex').value.trim();
+  if(/^#[0-9a-fA-F]{6}$/.test(hex)){
+    document.getElementById('main-picker').value=hex;
+    updateFromHex(hex);
+  }
+}
+function onRgbInput(){
+  const val = document.getElementById('val-rgb').value.trim();
+  const m = val.match(/(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+  if(m){const rgb={r:+m[1],g:+m[2],b:+m[3]};updateFromRgb(rgb);}
+}
+function onHslInput(){
+  const val = document.getElementById('val-hsl').value.trim();
+  const m = val.match(/(\d+)[,\s]+(\d+)%?[,\s]+(\d+)%?/);
+  if(m){const hsl={h:+m[1],s:+m[2],l:+m[3]};updateFromHsl(hsl);}
+}
+
+let currentColor = {hex:'#E8734A',r:232,g:115,b:74,h:16,s:77,l:60};
+
+function updateFromHex(hex){
+  const rgb=hexToRgb(hex);if(!rgb)return;
+  const hsl=rgbToHsl(rgb.r,rgb.g,rgb.b);
+  currentColor={hex:hex.toUpperCase(),...rgb,...hsl};
+  syncUI();
+}
+function updateFromRgb(rgb){
+  const hex=rgbToHex(rgb.r,rgb.g,rgb.b);
+  const hsl=rgbToHsl(rgb.r,rgb.g,rgb.b);
+  currentColor={hex,...rgb,...hsl};
+  document.getElementById('main-picker').value=hex;
+  syncUI();
+}
+function updateFromHsl(hsl){
+  const rgb=hslToRgb(hsl.h,hsl.s,hsl.l);
+  const hex=rgbToHex(rgb.r,rgb.g,rgb.b);
+  currentColor={hex,...rgb,...hsl};
+  document.getElementById('main-picker').value=hex;
+  syncUI();
+}
+function syncUI(){
+  document.getElementById('val-hex').value=currentColor.hex;
+  document.getElementById('val-rgb').value=`${currentColor.r}, ${currentColor.g}, ${currentColor.b}`;
+  document.getElementById('val-hsl').value=`${currentColor.h}°, ${currentColor.s}%, ${currentColor.l}%`;
+  document.getElementById('main-preview').style.background=currentColor.hex;
+  document.getElementById('main-picker').value=currentColor.hex;
+  renderHarmonies();
+}
+
+function renderHarmonies(){
+  const {h,s,l}=currentColor;
+  const harmonies=[
+    {name:'原色',colors:[{h,s,l}]},
+    {name:'互补',colors:[{h,s,l},{h:(h+180)%360,s,l}]},
+    {name:'类似',colors:[{h:(h+330)%360,s,l},{h,s,l},{h:(h+30)%360,s,l}]},
+    {name:'三元',colors:[{h,s,l},{h:(h+120)%360,s,l},{h:(h+240)%360,s,l}]},
+    {name:'分裂互补',colors:[{h,s,l},{h:(h+150)%360,s,l},{h:(h+210)%360,s,l}]},
+    {name:'四元',colors:[{h,s,l},{h:(h+90)%360,s,l},{h:(h+180)%360,s,l},{h:(h+270)%360,s,l}]},
+    {name:'单色浅',colors:[{h,s:Math.max(0,s-20),l:Math.min(100,l+15)},{h,s,l},{h,s:Math.min(100,s+10),l:Math.max(0,l-15)}]},
+  ];
+  const grid=document.getElementById('harmony-grid');
+  grid.innerHTML=harmonies.map((harm,i)=>{
+    const cells=harm.colors.map(c=>{
+      const rgb=hslToRgb(c.h,c.s,c.l);
+      const hex=rgbToHex(rgb.r,rgb.g,rgb.b);
+      return `<div class="harmony-swatch${c.h===h&&c.s===s&&c.l===l?' selected':''}" style="background:${hex};" onclick="selectHarmonyColor('${hex}')" title="${hex}"><div class="harmony-label">${hex}</div></div>`;
+    }).join('');
+    return `<div style="grid-column:span ${harm.colors.length}"><div style="font-size:.72rem;color:var(--text-muted);margin-bottom:4px;">${harm.name}</div><div style="display:flex;gap:8px;">${cells}</div></div>`;
+  }).join('');
+}
+
+function selectHarmonyColor(hex){
+  updateFromHex(hex);
+}
+
+// ====== TAB 2: Theme Palettes ======
+const THEME_PALETTES=[
+  {name:'Warm Sunset',tag:'暖色',colors:['#FF6B6B','#FF8E72','#FFA07A','#FEC8A7','#FFF1E6']},
+  {name:'Ocean Deep',tag:'冷色',colors:['#0B3954','#087E8B','#BFD7EA','#FF5A5F','#C81D25']},
+  {name:'Forest Mist',tag:'自然',colors:['#2D6A4F','#40916C','#52B788','#95D5B2','#D8F3DC']},
+  {name:'Midnight Plum',tag:'暗色',colors:['#1A1A2E','#16213E','#0F3460','#533483','#E94560']},
+  {name:'Golden Hour',tag:'暖色',colors:['#F4A261','#E9C46A','#E76F51','#264653','#2A9D8F']},
+  {name:'Lavender Dream',tag:'柔和',colors:['#E0BBE4','#957DAD','#D291BC','#FEC8D8','#FFDFD3']},
+  {name:'Neon Cyber',tag:'赛博',colors:['#00F5FF','#7B2FFF','#FF006E','#FFD600','#00FF88']},
+  {name:'Earthy Clay',tag:'自然',colors:['#BC6C25','#DDA15E','#FEFAE0','#283618','#606C38']},
+  {name:'Arctic Frost',tag:'冷色',colors:['#E0F7FA','#B2EBF2','#80DEEA','#4DD0E1','#26C6DA']},
+  {name:'Cherry Bloom',tag:'甜系',colors:['#FFB7B2','#FFDAC1','#E2F0CB','#B5EAD7','#C7CEEA']},
+  {name:'Noir Cinema',tag:'暗色',colors:['#0D0D0D','#1A1A1A','#2D2D2D','#4A4A4A','#8B8B8B']},
+  {name:'Retro Pop',tag:'复古',colors:['#FF6B35','#F7C59F','#EFEFD0','#004E89','#1A659E']},
+];
+
+function renderPalettes(){
+  const grid=document.getElementById('palette-grid');
+  grid.innerHTML=THEME_PALETTES.map(p=>{
+    const cssVars=p.colors.map((c,i)=>`  --color-${i+1}: ${c};`).join('\n');
+    const cssBlock = `:root {\n${cssVars}\n}`;
+    return `
+      <div class="palette-card" onclick="copyPaletteCSS('${encodeURIComponent(cssBlock)}', this)">
+        <div class="palette-strip">${p.colors.map(c=>`<div style="background:${c};"></div>`).join('')}</div>
+        <div class="palette-info">
+          <span class="palette-name">${p.name}</span>
+          <span class="palette-tag">${p.tag}</span>
+        </div>
+        <div class="palette-css">
+          <span class="copy-hint">点击复制 CSS</span>
+          <code>${cssBlock.replace(/</g,'&lt;')}</code>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function copyPaletteCSS(css, card){
+  const decoded = decodeURIComponent(css);
+  navigator.clipboard.writeText(decoded).then(()=>{
+    const hint = card.querySelector('.copy-hint');
+    hint.textContent = '✓ 已复制!';
+    hint.style.color = 'var(--teal)';
+    setTimeout(()=>{hint.textContent='点击复制 CSS';hint.style.color='';},1500);
+    showToast('CSS 变量已复制 ✦');
+  });
+}
+
+// ====== TAB 3: Gradient Studio ======
+function updateGradient(){
+  const c1=document.getElementById('grad-color1').value;
+  const c2=document.getElementById('grad-color2').value;
+  document.getElementById('grad-color1-hex').value=c1.toUpperCase();
+  document.getElementById('grad-color2-hex').value=c2.toUpperCase();
+  const type=document.getElementById('grad-type').value;
+  const angle=parseInt(document.getElementById('grad-angle').value);
+  document.getElementById('grad-angle-val').textContent=angle+'°';
+  document.getElementById('grad-angle-group').style.display=type==='linear'?'flex':'none';
+
+  let css;
+  if(type==='linear') css=`linear-gradient(${angle}deg, ${c1}, ${c2})`;
+  else if(type==='radial') css=`radial-gradient(circle, ${c1}, ${c2})`;
+  else css=`conic-gradient(from ${angle}deg, ${c1}, ${c2})`;
+
+  document.getElementById('grad-preview').style.background=css;
+  document.getElementById('grad-css').textContent=`background: ${css};`;
+}
+function updateGradientFromText(){
+  const c1=document.getElementById('grad-color1-hex').value.trim();
+  const c2=document.getElementById('grad-color2-hex').value.trim();
+  if(/^#[0-9a-fA-F]{6}$/.test(c1)) document.getElementById('grad-color1').value=c1;
+  if(/^#[0-9a-fA-F]{6}$/.test(c2)) document.getElementById('grad-color2').value=c2;
+  updateGradient();
+}
+function copyGradCSS(){
+  const css = 'background: '+document.getElementById('grad-css').textContent.replace('background: ','');
+  navigator.clipboard.writeText(css).then(()=>showToast('CSS 已复制 ✦'));
+}
+
+// ====== TAB 4: Image Extractor ======
+const dropZone=document.getElementById('drop-zone');
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop',e=>{
+  e.preventDefault();dropZone.classList.remove('dragover');
+  const file=e.dataTransfer.files[0];
+  if(file&&file.type.startsWith('image/')) processImage(file);
+});
+
+function handleImageUpload(event){
+  const file=event.target.files[0];
+  if(file) processImage(file);
+}
+
+function processImage(file){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const img=new Image();
+    img.onload=function(){
+      extractColors(img);
+      dropZone.querySelector('#drop-text').innerHTML=`<img src="${e.target.result}" alt="预览">`;
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function extractColors(img){
+  const canvas=document.createElement('canvas');
+  const maxSize=200;
+  const scale=Math.min(maxSize/img.width,maxSize/img.height);
+  canvas.width=img.width*scale;canvas.height=img.height*scale;
+  const ctx=canvas.getContext('2d');
+  ctx.drawImage(img,0,0,canvas.width,canvas.height);
+  const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+  const pixels=imageData.data;
+
+  // Sample pixels and cluster colors
+  const samples=[];
+  const step=Math.max(1,Math.floor(pixels.length/4/2000));
+  for(let i=0;i<pixels.length;i+=step*4){
+    const r=pixels[i],g=pixels[i+1],b=pixels[i+2],a=pixels[i+3];
+    if(a<128)continue;
+    samples.push([r,g,b]);
+  }
+
+  // Simple k-means (k=8)
+  const k=8;
+  let centroids=[];
+  for(let i=0;i<k;i++){
+    const idx=Math.floor(Math.random()*samples.length);
+    centroids.push([...samples[idx]]);
+  }
+
+  for(let iter=0;iter<10;iter++){
+    const clusters=Array.from({length:k},()=>[]);
+    samples.forEach(s=>{
+      let minDist=Infinity,minIdx=0;
+      centroids.forEach((c,i)=>{
+        const dist=(s[0]-c[0])**2+(s[1]-c[1])**2+(s[2]-c[2])**2;
+        if(dist<minDist){minDist=dist;minIdx=i;}
+      });
+      clusters[minIdx].push(s);
+    });
+    centroids=clusters.map(cluster=>{
+      if(cluster.length===0)return [0,0,0];
+      const sum=cluster.reduce((a,c)=>[a[0]+c[0],a[1]+c[1],a[2]+c[2]],[0,0,0]);
+      return [Math.round(sum[0]/cluster.length),Math.round(sum[1]/cluster.length),Math.round(sum[2]/cluster.length)];
+    });
+  }
+
+  // Sort by cluster size (approximate) - use brightness for sorting instead
+  centroids.sort((a,b)=>{
+    const brightA=a[0]*0.299+a[1]*0.587+a[2]*0.114;
+    const brightB=b[0]*0.299+b[0]*0.587+b[2]*0.114;
+    return brightB-brightA;
+  });
+
+  const container=document.getElementById('extracted-colors');
+  container.innerHTML=centroids.map(c=>{
+    const hex=rgbToHex(c[0],c[1],c[2]);
+    const rgbStr=`${c[0]}, ${c[1]}, ${c[2]}`;
+    return `
+      <div class="extracted-swatch" onclick="copyColorValue('${hex}')" style="cursor:pointer;">
+        <div class="swatch-block" style="background:${hex};"></div>
+        <div class="swatch-info"><span>${hex}</span><br>rgb(${rgbStr})</div>
+      </div>`;
+  }).join('');
+}
+
+function copyColorValue(hex){
+  navigator.clipboard.writeText(hex).then(()=>showToast(`${hex} 已复制 ✦`));
+}
+
+// ====== TAB 5: Converter ======
+function convertFrom(source){
+  let hex,rgb;
+  try{
+    if(source==='hex'){
+      hex=document.getElementById('conv-hex').value.trim();
+      rgb=hexToRgb(hex);if(!rgb)return;
+    }else if(source==='rgb'){
+      const v=document.getElementById('conv-rgb').value.trim();
+      const m=v.match(/(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+      if(!m)return;rgb={r:+m[1],g:+m[2],b:+m[3]};
+      hex=rgbToHex(rgb.r,rgb.g,rgb.b);
+    }else if(source==='hsl'){
+      const v=document.getElementById('conv-hsl').value.trim();
+      const m=v.match(/(\d+)[,\s]+(\d+)%?[,\s]+(\d+)%?/);
+      if(!m)return;
+      rgb=hslToRgb(+m[1],+m[2],+m[3]);
+      hex=rgbToHex(rgb.r,rgb.g,rgb.b);
+    }
+  }catch(e){return;}
+
+  if(!rgb||!hex)return;
+  const hsl=rgbToHsl(rgb.r,rgb.g,rgb.b);
+  document.getElementById('conv-hex').value=hex;
+  document.getElementById('conv-rgb').value=`${rgb.r}, ${rgb.g}, ${rgb.b}`;
+  document.getElementById('conv-hsl').value=`${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
+  ['hex','rgb','hsl'].forEach(s=>{
+    document.getElementById('conv-preview-'+s).style.background=hex;
+  });
+}
+
+// ====== Toast ======
+function showToast(msg){
+  const toast=document.getElementById('toast');
+  toast.textContent=msg;toast.classList.add('show');
+  clearTimeout(toast._timeout);
+  toast._timeout=setTimeout(()=>toast.classList.remove('show'),2000);
+}
+
+// ====== Init ======
+document.addEventListener('DOMContentLoaded',()=>{
+  syncUI();
+  renderPalettes();
+  updateGradient();
+});
+</script>
+</body>
+</html>

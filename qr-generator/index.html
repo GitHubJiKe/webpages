@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Golden Signal — 二维码生成器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       Golden Signal — 二维码生成器
+       ✦ Warm editorial · Cream & terracotta · Clear contrast ✦
+       ============================================================ */
+
+    :root {
+      --bg:           #faf6f0;
+      --bg-warm:      #f5efe5;
+      --card:         #ffffff;
+      --card-hover:   #fefcf9;
+      --input-bg:     #f9f4ec;
+      --text:         #2c2416;
+      --text-secondary:#7a6e5e;
+      --text-muted:   #b0a392;
+      --accent:       #d4693b;
+      --accent-light: #f0a880;
+      --accent-glow:  rgba(212, 105, 59, 0.12);
+      --gold:         #b8954a;
+      --gold-light:   #faf3e0;
+      --teal:         #5b8c7a;
+      --teal-light:   #e8f2ed;
+      --border:       #e4d8c4;
+      --border-focus: #d4693b;
+      --shadow-sm:    0 1px 3px rgba(44, 36, 22, 0.05);
+      --shadow-md:    0 4px 20px rgba(44, 36, 22, 0.07);
+      --shadow-lg:    0 8px 32px rgba(44, 36, 22, 0.10);
+      --radius-sm:    8px;
+      --radius-md:    14px;
+      --radius-lg:    20px;
+      --font-display: 'Cormorant Garamond', 'Noto Serif SC', serif;
+      --font-ui:      'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono:    'JetBrains Mono', monospace;
+    }
+
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html{font-size:16px;scroll-behavior:smooth;}
+
+    body{
+      font-family:var(--font-ui);
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      line-height:1.65;
+      -webkit-font-smoothing:antialiased;
+      position:relative;
+      overflow-x:hidden;
+    }
+
+    /* Subtle paper texture */
+    body::before{
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+      opacity:.025;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size:256px 256px;
+    }
+
+    /* ---- Decorative blob ---- */
+    .blob{
+      position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(140px);opacity:.1;
+    }
+    .blob--top{top:-15%;right:-10%;width:55vw;height:55vw;background:radial-gradient(circle,rgba(212,105,59,.5) 0%,transparent 70%);}
+    .blob--bottom{bottom:-15%;left:-8%;width:40vw;height:40vw;background:radial-gradient(circle,rgba(184,149,74,.4) 0%,transparent 70%);opacity:.08;}
+
+    /* ---- Layout ---- */
+    .container{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:40px 24px 60px;}
+
+    /* ---- Header ---- */
+    .site-header{text-align:center;padding:36px 0 28px;}
+    .site-header h1{
+      font-family:var(--font-display);
+      font-size:clamp(2rem,4.5vw,2.8rem);font-weight:700;
+      color:var(--text);letter-spacing:-0.01em;
+    }
+    .site-header h1 em{color:var(--accent);font-style:italic;}
+    .site-header p{color:var(--text-secondary);font-size:.92rem;margin-top:4px;}
+    .site-header::after{
+      content:'';display:block;width:50px;height:2px;
+      background:linear-gradient(90deg,transparent,var(--accent),transparent);
+      margin:20px auto 0;
+    }
+
+    /* ---- Main grid ---- */
+    .main-grid{display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start;}
+
+    /* ---- Panel Card ---- */
+    .panel-card{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:var(--radius-md);padding:20px 22px;
+      box-shadow:var(--shadow-sm);transition:box-shadow .3s,border-color .3s;
+    }
+    .panel-card:hover{box-shadow:var(--shadow-md);border-color:#d4c8b0;}
+    .panel-card h3{
+      font-family:var(--font-display);font-size:1.05rem;font-weight:600;
+      color:var(--text);margin-bottom:14px;letter-spacing:.01em;
+    }
+
+    /* ---- Type Chips ---- */
+    .type-chips{display:flex;flex-wrap:wrap;gap:8px;}
+    .type-chip{
+      padding:8px 15px;border-radius:20px;
+      border:1px solid var(--border);background:var(--input-bg);
+      color:var(--text-secondary);cursor:pointer;
+      font-size:.8rem;font-weight:500;transition:all .22s ease;
+      font-family:var(--font-ui);white-space:nowrap;
+    }
+    .type-chip:hover{border-color:var(--accent-light);color:var(--text);}
+    .type-chip.active{
+      background:rgba(212,105,59,.08);border-color:var(--accent);
+      color:var(--accent);box-shadow:0 2px 8px rgba(212,105,59,.12);
+    }
+
+    /* ---- Inputs ---- */
+    .input-group{margin-top:12px;}
+    .input-group label{
+      display:block;font-size:.75rem;font-weight:600;color:var(--text-secondary);
+      margin-bottom:5px;letter-spacing:.02em;
+    }
+    .input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    input[type="text"],textarea,select{
+      width:100%;padding:10px 14px;
+      background:var(--input-bg);border:1px solid var(--border);
+      border-radius:var(--radius-sm);color:var(--text);
+      font-size:.86rem;font-family:var(--font-ui);
+      transition:all .25s;outline:none;
+    }
+    textarea{resize:vertical;min-height:64px;}
+    input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+    input::placeholder,textarea::placeholder{color:var(--text-muted);}
+    select{
+      appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a6e5e' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 12px center;
+      padding-right:36px;background-color:var(--input-bg);
+    }
+
+    /* ---- Color Swatches ---- */
+    .color-section{margin-top:12px;}
+    .color-label{font-size:.78rem;color:var(--text-secondary);margin-bottom:8px;font-weight:500;display:flex;align-items:center;gap:8px;}
+    .color-swatches{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .color-swatch{
+      width:34px;height:34px;border-radius:50%;cursor:pointer;
+      border:2.5px solid transparent;transition:all .2s;
+      position:relative;box-shadow:0 1px 4px rgba(0,0,0,.08);
+    }
+    .color-swatch:hover{transform:scale(1.14);box-shadow:0 3px 10px rgba(0,0,0,.12);}
+    .color-swatch.active{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+    .color-swatch.custom{background:conic-gradient(red,yellow,lime,aqua,blue,magenta,red);}
+    .color-swatch.transparent-swatch{
+      background-image:linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%,#ccc),
+        linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%,#ccc);
+      background-size:10px 10px;background-position:0 0,5px 5px;
+    }
+    .inline-color-picker{display:inline-flex;align-items:center;}
+    .inline-color-picker input[type="color"]{
+      width:34px;height:34px;padding:0;border:none;border-radius:50%;cursor:pointer;background:none;
+    }
+    .inline-color-picker input[type="color"]::-webkit-color-swatch-wrapper{padding:0;}
+    .inline-color-picker input[type="color"]::-webkit-color-swatch{border-radius:50%;border:2px solid var(--border);}
+
+    /* ---- Dot Style ---- */
+    .style-options{display:flex;gap:10px;flex-wrap:wrap;}
+    .style-option{
+      display:flex;flex-direction:column;align-items:center;gap:6px;
+      padding:12px 16px;border-radius:var(--radius-sm);
+      border:1.5px solid var(--border);background:var(--input-bg);
+      cursor:pointer;transition:all .22s;min-width:68px;
+    }
+    .style-option:hover{border-color:var(--accent-light);}
+    .style-option.active{border-color:var(--accent);background:var(--accent-glow);}
+    .style-option .dot-preview{width:20px;height:20px;border-radius:2px;background:var(--accent);}
+    .style-option .dot-preview.rounded{border-radius:6px;}
+    .style-option .dot-preview.circle{border-radius:50%;}
+    .style-option .dot-label{font-size:.68rem;color:var(--text-secondary);font-weight:500;}
+
+    /* ---- Slider ---- */
+    .slider-group{margin-top:10px;}
+    .slider-label{display:flex;justify-content:space-between;font-size:.77rem;color:var(--text-secondary);margin-bottom:5px;font-weight:500;}
+    input[type="range"]{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;outline:none;}
+    input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;border:3px solid #fff;box-shadow:0 2px 8px rgba(212,105,59,.25);}
+
+    /* ---- Logo Upload ---- */
+    .logo-upload-area{
+      border:1.5px dashed var(--border);border-radius:var(--radius-sm);
+      padding:16px;text-align:center;cursor:pointer;transition:all .25s;
+      color:var(--text-muted);font-size:.8rem;margin-top:10px;
+    }
+    .logo-upload-area:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-glow);}
+    .logo-upload-area.has-logo{border-style:solid;border-color:var(--accent);color:var(--accent);background:var(--accent-glow);}
+    #logo-input{display:none;}
+    .btn-remove{
+      margin-top:8px;padding:5px 14px;background:transparent;border:1px solid var(--border);
+      border-radius:20px;cursor:pointer;font-size:.73rem;color:var(--text-secondary);
+      transition:all .2s;font-family:var(--font-ui);
+    }
+    .btn-remove:hover{border-color:var(--accent);color:var(--accent);}
+
+    /* ---- Right Panel (Preview) ---- */
+    .preview-panel{position:sticky;top:24px;display:flex;flex-direction:column;gap:16px;}
+    .preview-card{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:var(--radius-md);padding:28px;
+      display:flex;flex-direction:column;align-items:center;
+      box-shadow:var(--shadow-md);
+    }
+    .qr-wrapper{
+      position:relative;width:280px;height:280px;
+      display:flex;align-items:center;justify-content:center;
+      background:var(--input-bg);border-radius:var(--radius-md);
+      border:1px solid var(--border);
+    }
+    .qr-wrapper::before{
+      content:'';position:absolute;inset:-8px;border-radius:var(--radius-lg);
+      background:radial-gradient(circle at 50% 50%,rgba(212,105,59,.06),transparent 70%);
+      pointer-events:none;
+    }
+    #qr-container{position:relative;z-index:1;}
+    #qr-container canvas,#qr-container svg{border-radius:8px;}
+
+    /* ---- Download ---- */
+    .btn-download{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:12px 32px;margin-top:18px;
+      background:linear-gradient(135deg,var(--accent),#c05a2f);
+      border:none;border-radius:30px;
+      color:#fff;font-weight:600;font-size:.9rem;cursor:pointer;
+      font-family:var(--font-display);letter-spacing:.03em;
+      transition:all .3s;box-shadow:0 4px 18px rgba(212,105,59,.25);
+    }
+    .btn-download:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(212,105,59,.35);}
+    .btn-download:active{transform:scale(.97);}
+    .size-display{font-size:.73rem;color:var(--text-muted);margin-top:8px;font-family:var(--font-mono);}
+
+    /* ---- Toast ---- */
+    .toast{
+      position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(120px);
+      background:var(--card);border:1px solid var(--accent);color:var(--accent);
+      padding:10px 24px;border-radius:30px;font-size:.85rem;z-index:100;
+      opacity:0;transition:all .3s cubic-bezier(.22,.61,.36,1);pointer-events:none;
+      box-shadow:var(--shadow-md);
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+    /* ---- Responsive ---- */
+    @media(max-width:900px){
+      .main-grid{grid-template-columns:1fr;gap:20px;}
+      .preview-panel{position:static;}
+      .qr-wrapper{width:240px;height:240px;}
+    }
+    @media(max-width:500px){
+      .container{padding:24px 12px 40px;}
+      .panel-card{padding:16px;}
+      .type-chips{gap:6px;}
+      .type-chip{padding:6px 12px;font-size:.74rem;}
+      .input-row{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+
+  <div class="blob blob--top"></div>
+  <div class="blob blob--bottom"></div>
+
+  <div class="container">
+
+    <!-- ====== 返回导航 ====== -->
+    <header style="display:flex;align-items:center;justify-content:space-between;padding:0 0 28px;position:relative;z-index:1;">
+      <a href="../" style="display:flex;align-items:center;gap:6px;color:var(--text-muted);text-decoration:none;font-size:.85rem;font-family:var(--font-ui);transition:color .2s;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>返回首页
+      </a>
+      <span style="font-family:var(--font-display);font-size:1.05rem;font-weight:600;color:var(--text);">Golden <em style="color:var(--accent);font-style:italic;">Signal</em></span>
+      <span style="width:80px;"></span>
+    </header>
+
+    <div class="main-grid">
+
+      <!-- ====== LEFT: Config ====== -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+
+        <!-- Type -->
+        <div class="panel-card">
+          <h3>✦ 内容类型</h3>
+          <div class="type-chips" id="type-chips">
+            <button class="type-chip active" data-type="url">🔗 链接</button>
+            <button class="type-chip" data-type="text">📝 文本</button>
+            <button class="type-chip" data-type="email">✉️ 邮件</button>
+            <button class="type-chip" data-type="phone">📞 电话</button>
+            <button class="type-chip" data-type="sms">💬 短信</button>
+            <button class="type-chip" data-type="wifi">📶 WiFi</button>
+            <button class="type-chip" data-type="vcard">👤 名片</button>
+          </div>
+          <div id="dynamic-fields" class="input-group"></div>
+        </div>
+
+        <!-- Dot Style -->
+        <div class="panel-card">
+          <h3>◈ 码点样式</h3>
+          <div class="style-options" id="dot-styles">
+            <div class="style-option active" data-style="square"><div class="dot-preview"></div><span class="dot-label">方形</span></div>
+            <div class="style-option" data-style="rounded"><div class="dot-preview rounded"></div><span class="dot-label">圆角</span></div>
+            <div class="style-option" data-style="dots"><div class="dot-preview circle"></div><span class="dot-label">圆点</span></div>
+            <div class="style-option" data-style="classy"><div class="dot-preview" style="border-radius:8px 2px 8px 2px;"></div><span class="dot-label">精致</span></div>
+          </div>
+        </div>
+
+        <!-- Colors -->
+        <div class="panel-card">
+          <h3>🎨 颜色</h3>
+          <div class="color-section">
+            <div class="color-label">前景色</div>
+            <div class="color-swatches" id="fg-swatches">
+              <div class="color-swatch active" style="background:#000000;" data-color="#000000"></div>
+              <div class="color-swatch" style="background:#d4693b;" data-color="#d4693b"></div>
+              <div class="color-swatch" style="background:#b8954a;" data-color="#b8954a"></div>
+              <div class="color-swatch" style="background:#5b8c7a;" data-color="#5b8c7a"></div>
+              <div class="color-swatch" style="background:#4a6fa5;" data-color="#4a6fa5"></div>
+              <div class="color-swatch" style="background:#c2543d;" data-color="#c2543d"></div>
+              <div class="color-swatch" style="background:#2c2416;" data-color="#2c2416"></div>
+              <div class="inline-color-picker">
+                <input type="color" id="fg-custom" value="#000000" title="自定义前景色">
+              </div>
+            </div>
+          </div>
+          <div class="color-section">
+            <div class="color-label">背景色</div>
+            <div class="color-swatches" id="bg-swatches">
+              <div class="color-swatch active" style="background:#ffffff;" data-color="#ffffff"></div>
+              <div class="color-swatch" style="background:#faf6f0;" data-color="#faf6f0"></div>
+              <div class="color-swatch" style="background:#f5efe5;" data-color="#f5efe5"></div>
+              <div class="color-swatch" style="background:#fef3c7;" data-color="#fef3c7"></div>
+              <div class="color-swatch transparent-swatch" data-color="transparent" title="透明背景"></div>
+              <div class="inline-color-picker">
+                <input type="color" id="bg-custom" value="#ffffff" title="自定义背景色">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logo -->
+        <div class="panel-card">
+          <h3>🖼️ Logo 中心图</h3>
+          <div class="logo-upload-area" id="logo-area" onclick="document.getElementById('logo-input').click()">
+            <span id="logo-text">点击上传 Logo 图片（可选）</span>
+          </div>
+          <input type="file" id="logo-input" accept="image/*" onchange="handleLogoUpload(event)">
+          <div id="logo-size-group" style="display:none;">
+            <div class="slider-group" style="margin-top:10px;">
+              <div class="slider-label"><span>Logo 大小</span><span id="logo-size-val">0.25</span></div>
+              <input type="range" id="logo-size" min="0.12" max="0.4" step="0.01" value="0.25" oninput="updateQR()">
+            </div>
+            <button class="btn-remove" onclick="removeLogo()">移除 Logo</button>
+          </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="panel-card">
+          <h3>⚙️ 参数</h3>
+          <div class="slider-group">
+            <div class="slider-label"><span>二维码尺寸</span><span id="size-val">300px</span></div>
+            <input type="range" id="qr-size" min="200" max="500" step="10" value="300" oninput="updateQR()">
+          </div>
+          <div style="margin-top:14px;">
+            <label style="display:flex;justify-content:space-between;font-size:.77rem;color:var(--text-secondary);margin-bottom:5px;font-weight:500;">纠错等级</label>
+            <select id="error-level" onchange="updateQR()">
+              <option value="L">L — 低 (7%)</option>
+              <option value="M" selected>M — 中 (15%)</option>
+              <option value="Q">Q — 高 (25%)</option>
+              <option value="H">H — 最高 (30%)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== RIGHT: Preview ====== -->
+      <div class="preview-panel">
+        <div class="preview-card">
+          <div class="qr-wrapper">
+            <div id="qr-container"></div>
+          </div>
+          <button class="btn-download" onclick="downloadQR()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            下载 PNG
+          </button>
+          <span class="size-display" id="qr-size-display"></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- ====== QR Code Styling Library ====== -->
+  <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0/lib/qr-code-styling.js"></script>
+
+  <script>
+    /* ============================================================
+       App Logic
+       ============================================================ */
+
+    let qrCode = null;
+    let logoData = null;
+    let currentType = 'url';
+    let currentBgColor = '#ffffff';
+
+    // ---- Type switching ----
+    const typeFields = {
+      url: `<label>网址 URL</label><input type="text" id="field-url" placeholder="https://example.com" value="https://" oninput="updateQR()">`,
+      text: `<label>文本内容</label><textarea id="field-text" placeholder="输入任意文本内容..." oninput="updateQR()"></textarea>`,
+      email: `<label>收件人邮箱</label><input type="text" id="field-email" placeholder="hello@example.com" oninput="updateQR()"><div class="input-row" style="margin-top:10px;"><div><label>主题</label><input type="text" id="field-email-subject" placeholder="邮件主题" oninput="updateQR()"></div><div><label>正文</label><input type="text" id="field-email-body" placeholder="邮件正文" oninput="updateQR()"></div></div>`,
+      phone: `<label>电话号码</label><input type="text" id="field-phone" placeholder="+8613800138000" oninput="updateQR()">`,
+      sms: `<label>手机号码</label><input type="text" id="field-sms-phone" placeholder="+8613800138000" oninput="updateQR()"><div style="margin-top:10px;"><label>短信内容</label><textarea id="field-sms-body" placeholder="短信内容..." oninput="updateQR()"></textarea></div>`,
+      wifi: `<div class="input-row"><div><label>SSID (网络名)</label><input type="text" id="field-wifi-ssid" placeholder="WiFi名称" oninput="updateQR()"></div><div><label>密码</label><input type="text" id="field-wifi-pass" placeholder="WiFi密码" oninput="updateQR()"></div></div><div style="margin-top:10px;"><label>加密方式</label><select id="field-wifi-enc" onchange="updateQR()"><option value="WPA">WPA/WPA2</option><option value="WEP">WEP</option><option value="nopass">无密码</option></select></div>`,
+      vcard: `<div class="input-row"><div><label>姓名</label><input type="text" id="field-vcard-name" placeholder="张三" oninput="updateQR()"></div><div><label>电话</label><input type="text" id="field-vcard-phone" placeholder="手机号" oninput="updateQR()"></div></div><div class="input-row" style="margin-top:10px;"><div><label>邮箱</label><input type="text" id="field-vcard-email" placeholder="email@example.com" oninput="updateQR()"></div><div><label>公司</label><input type="text" id="field-vcard-org" placeholder="公司名称" oninput="updateQR()"></div></div>`,
+    };
+
+    document.querySelectorAll('.type-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.type-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentType = chip.dataset.type;
+        renderDynamicFields();
+        updateQR();
+      });
+    });
+
+    function renderDynamicFields() {
+      document.getElementById('dynamic-fields').innerHTML = typeFields[currentType] || '';
+    }
+
+    function getQRData() {
+      switch (currentType) {
+        case 'url': {
+          const url = (document.getElementById('field-url')?.value || '').trim();
+          return url || 'https://';
+        }
+        case 'text': {
+          return document.getElementById('field-text')?.value || '';
+        }
+        case 'email': {
+          const email = (document.getElementById('field-email')?.value || '').trim();
+          const subject = (document.getElementById('field-email-subject')?.value || '').trim();
+          const body = (document.getElementById('field-email-body')?.value || '').trim();
+          if (!email) return '';
+          let mailto = `mailto:${email}`;
+          const params = [];
+          if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+          if (body) params.push(`body=${encodeURIComponent(body)}`);
+          if (params.length) mailto += '?' + params.join('&');
+          return mailto;
+        }
+        case 'phone': {
+          const phone = (document.getElementById('field-phone')?.value || '').trim();
+          return phone ? `tel:${phone}` : '';
+        }
+        case 'sms': {
+          const phone = (document.getElementById('field-sms-phone')?.value || '').trim();
+          const body = (document.getElementById('field-sms-body')?.value || '').trim();
+          if (!phone) return '';
+          let sms = `smsto:${phone}`;
+          if (body) sms += `:${body}`;
+          return sms;
+        }
+        case 'wifi': {
+          const ssid = (document.getElementById('field-wifi-ssid')?.value || '').trim();
+          const pass = (document.getElementById('field-wifi-pass')?.value || '').trim();
+          const enc = document.getElementById('field-wifi-enc')?.value || 'WPA';
+          if (!ssid) return '';
+          return `WIFI:T:${enc};S:${ssid};P:${pass};;`;
+        }
+        case 'vcard': {
+          const name = (document.getElementById('field-vcard-name')?.value || '').trim();
+          const phone = (document.getElementById('field-vcard-phone')?.value || '').trim();
+          const email = (document.getElementById('field-vcard-email')?.value || '').trim();
+          const org = (document.getElementById('field-vcard-org')?.value || '').trim();
+          if (!name) return '';
+          let vcard = 'BEGIN:VCARD\nVERSION:3.0\n';
+          vcard += `FN:${name}\n`;
+          if (phone) vcard += `TEL:${phone}\n`;
+          if (email) vcard += `EMAIL:${email}\n`;
+          if (org) vcard += `ORG:${org}\n`;
+          vcard += 'END:VCARD';
+          return vcard;
+        }
+        default: return '';
+      }
+    }
+
+    // ---- Dot Style ----
+    document.querySelectorAll('#dot-styles .style-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('#dot-styles .style-option').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        updateQR();
+      });
+    });
+
+    function getDotStyle() {
+      const active = document.querySelector('#dot-styles .style-option.active');
+      return active ? active.dataset.style : 'square';
+    }
+
+    // ---- Color Swatches ----
+    document.querySelectorAll('#fg-swatches .color-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        document.querySelectorAll('#fg-swatches .color-swatch').forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+        document.getElementById('fg-custom').value = swatch.dataset.color;
+        updateQR();
+      });
+    });
+    document.getElementById('fg-custom').addEventListener('input', () => {
+      document.querySelectorAll('#fg-swatches .color-swatch').forEach(s => s.classList.remove('active'));
+      updateQR();
+    });
+
+    document.querySelectorAll('#bg-swatches .color-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        document.querySelectorAll('#bg-swatches .color-swatch').forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+        currentBgColor = swatch.dataset.color;
+        if (currentBgColor !== 'transparent') {
+          document.getElementById('bg-custom').value = currentBgColor;
+        }
+        updateQR();
+      });
+    });
+    document.getElementById('bg-custom').addEventListener('input', () => {
+      document.querySelectorAll('#bg-swatches .color-swatch').forEach(s => s.classList.remove('active'));
+      currentBgColor = document.getElementById('bg-custom').value;
+      updateQR();
+    });
+
+    function getFgColor() { return document.getElementById('fg-custom').value; }
+    function getBgColor() { return currentBgColor; }
+
+    // ---- Logo ----
+    function handleLogoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        logoData = e.target.result;
+        document.getElementById('logo-area').classList.add('has-logo');
+        document.getElementById('logo-text').textContent = file.name;
+        document.getElementById('logo-size-group').style.display = 'block';
+        updateQR();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeLogo() {
+      logoData = null;
+      document.getElementById('logo-area').classList.remove('has-logo');
+      document.getElementById('logo-text').textContent = '点击上传 Logo 图片（可选）';
+      document.getElementById('logo-size-group').style.display = 'none';
+      document.getElementById('logo-input').value = '';
+      updateQR();
+    }
+
+    // ---- Build QR Code ----
+    function updateQR() {
+      const data = getQRData();
+      if (!data) {
+        showToast('请输入内容');
+        return;
+      }
+
+      const size = parseInt(document.getElementById('qr-size').value);
+      const dotStyle = getDotStyle();
+      const fgColor = getFgColor();
+      const bgColor = getBgColor();
+      const errorLevel = document.getElementById('error-level').value;
+      const logoSize = parseFloat(document.getElementById('logo-size')?.value || 0.25);
+
+      document.getElementById('size-val').textContent = size + 'px';
+      document.getElementById('logo-size-val').textContent = logoSize;
+      document.getElementById('qr-size-display').textContent = `${size}×${size}px`;
+
+      const options = {
+        width: size,
+        height: size,
+        data: data,
+        margin: 10,
+        qrOptions: {
+          typeNumber: 0,
+          mode: 'Byte',
+          errorCorrectionLevel: errorLevel,
+        },
+        image: logoData || undefined,
+        imageOptions: {
+          hideBackgroundDots: true,
+          imageSize: logoSize,
+          margin: 8,
+        },
+        dotsOptions: {
+          color: fgColor,
+          type: dotStyle,
+        },
+        backgroundOptions: {
+          color: bgColor === 'transparent' ? 'rgba(0,0,0,0)' : bgColor,
+        },
+        cornersSquareOptions: {
+          color: fgColor,
+          type: dotStyle === 'dots' ? 'dot' : 'square',
+        },
+        cornersDotOptions: {
+          color: fgColor,
+          type: 'square',
+        },
+      };
+
+      if (qrCode) {
+        qrCode.update(options);
+      } else {
+        qrCode = new QRCodeStyling(options);
+        qrCode.append(document.getElementById('qr-container'));
+      }
+    }
+
+    // ---- Download ----
+    function downloadQR() {
+      if (!qrCode) return;
+      const data = getQRData();
+      if (!data) { showToast('请先输入内容'); return; }
+      qrCode.download({ name: 'qrcode', extension: 'png' });
+      showToast('下载中...');
+    }
+
+    // ---- Toast ----
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    // ---- Init ----
+    document.addEventListener('DOMContentLoaded', () => {
+      renderDynamicFields();
+      updateQR();
+    });
+  </script>
+
+</body>
+</html>
