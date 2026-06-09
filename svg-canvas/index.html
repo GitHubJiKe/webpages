@@ -1472,17 +1472,32 @@ function applyViewport(){
 }
 
 // 将 svgEl 显示坐标（像素）转换为画布坐标（考虑 vp）
+// 将 svgEl 内的像素偏移(px, py) 转换为 viewBox 坐标（不含 vp 变换）
+function pixelToViewBox(px, py){
+  var rect=svgEl.getBoundingClientRect();
+  // SVG preserveAspectRatio="xMidYMid meet"：等比缩放，viewBox完整显示
+  var scaleX = rect.width  / canvasW;
+  var scaleY = rect.height / canvasH;
+  var svgScale = Math.min(scaleX, scaleY); // 像素/viewBox单位
+  // letterbox 偏移（居中留白，像素）
+  var offsetX = (rect.width  - canvasW * svgScale) / 2;
+  var offsetY = (rect.height - canvasH * svgScale) / 2;
+  return { x: (px - offsetX) / svgScale, y: (py - offsetY) / svgScale };
+}
+
 function getSVGPt(e){
   var rect=svgEl.getBoundingClientRect();
   var cx=e.touches?e.touches[0].clientX:e.clientX;
   var cy=e.touches?e.touches[0].clientY:e.clientY;
   // 先得到 svgEl 内的像素坐标
   var px=(cx-rect.left), py=(cy-rect.top);
+  // 像素 → viewBox 坐标
+  var vb = pixelToViewBox(px, py);
   // 再逆 vp 变换得到画布坐标
-  return { x:(px-vp.tx)/vp.scale, y:(py-vp.ty)/vp.scale };
+  return { x:(vb.x-vp.tx)/vp.scale, y:(vb.y-vp.ty)/vp.scale };
 }
 
-// 以 (ox,oy)（svgEl 像素坐标）为中心缩放
+// 以 (ox,oy)（viewBox 坐标）为中心缩放
 function zoomAt(ox, oy, factor){
   var newScale = Math.min(VP_MAX, Math.max(VP_MIN, vp.scale * factor));
   var ratio = newScale / vp.scale;
@@ -1503,10 +1518,11 @@ canvasArea.addEventListener('wheel', function(e){
   if(!(e.metaKey||e.ctrlKey)) return;
   e.preventDefault();
   var rect=svgEl.getBoundingClientRect();
-  var ox=e.clientX-rect.left, oy=e.clientY-rect.top;
+  var px=e.clientX-rect.left, py=e.clientY-rect.top;
+  var vb=pixelToViewBox(px, py);
   // deltaY > 0 → 缩小，deltaY < 0 → 放大
   var factor = e.deltaY < 0 ? 1.12 : (1/1.12);
-  zoomAt(ox, oy, factor);
+  zoomAt(vb.x, vb.y, factor);
 }, {passive:false});
 
 // 双指 pinch（trackpad / touch）缩放
@@ -1522,7 +1538,8 @@ canvasArea.addEventListener('touchmove', function(e){
     var rect=svgEl.getBoundingClientRect();
     var mx=((t0.clientX+t1.clientX)/2)-rect.left;
     var my=((t0.clientY+t1.clientY)/2)-rect.top;
-    zoomAt(mx, my, d/lastPinchDist);
+    var mvb=pixelToViewBox(mx, my);
+    zoomAt(mvb.x, mvb.y, d/lastPinchDist);
   }
   lastPinchDist=d;
 }, {passive:true});
