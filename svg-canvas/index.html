@@ -95,6 +95,16 @@
     .layer-btn:hover{border-color:var(--border-hover);color:var(--text-primary)}
     .layer-btn:disabled{opacity:.3;cursor:not-allowed}
 
+    /* Bg image panel */
+    .bg-img-preview{width:100%;height:56px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+    .bg-img-preview img{max-width:100%;max-height:100%;object-fit:contain}
+    .bg-img-placeholder{font-size:11px;color:var(--text-muted)}
+    .bg-img-actions{display:flex;gap:4px}
+    .bg-img-btn{flex:1;padding:5px 0;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-secondary);font-size:11px;cursor:pointer;transition:all .2s;font-family:var(--font-ui);text-align:center}
+    .bg-img-btn:hover{border-color:var(--border-hover);color:var(--text-primary)}
+    .bg-img-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+    .bg-img-opacity-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+
     /* Statusbar */
     .statusbar{flex-shrink:0;height:28px;background:var(--bg-surface);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:16px;font-size:11px;color:var(--text-muted);font-family:var(--font-mono)}
     .statusbar span{display:flex;align-items:center;gap:4px}
@@ -139,6 +149,15 @@
     .ctrl-handle{fill:rgba(255,200,80,.15);stroke:#ffc850;stroke-width:1;cursor:pointer}
     .ctrl-handle:hover{fill:rgba(255,200,80,.4)}
     .ctrl-line{stroke:#ffc850;stroke-width:0.8;stroke-dasharray:3,2;pointer-events:none}
+    .edge-handle{fill:rgba(80,220,140,.15);stroke:#50dc8c;stroke-width:1;cursor:grab;transition:fill .15s}
+    .edge-handle:hover{fill:rgba(80,220,140,.5)}
+    /* 旋转模式 */
+    .rotate-bbox{fill:none;stroke:rgba(255,180,50,.55);stroke-width:1;stroke-dasharray:5,3;pointer-events:none}
+    .rotate-handle{fill:rgba(255,180,50,.18);stroke:#ffb432;stroke-width:1.5;cursor:crosshair;transition:fill .15s}
+    .rotate-handle:hover{fill:rgba(255,180,50,.55)}
+    .rotate-center{fill:#ffb432;stroke:#fff;stroke-width:1.5;cursor:move;pointer-events:all}
+    .canvas-area.mode-rotate{cursor:default}
+    .canvas-area.mode-rotate #pathGroup path{cursor:default}
 
     #fileImport{display:none}
     @media(max-width:720px){.panel{display:none}}
@@ -183,6 +202,9 @@
     <button class="tb-btn" id="btnNodeEdit" title="节点编辑 (N)">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2" stroke-width="2"/><circle cx="12" cy="5" r="2" stroke-width="2"/><circle cx="19" cy="12" r="2" stroke-width="2"/><circle cx="12" cy="19" r="2" stroke-width="2"/></svg>节点
     </button>
+    <button class="tb-btn" id="btnRotate" title="旋转 (R)">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>旋转
+    </button>
   </div>
   <div class="tb-sep"></div>
   <div class="tb-group">
@@ -204,6 +226,9 @@
   </div>
   <div class="tb-sep"></div>
   <div class="tb-group">
+    <button class="tb-btn" id="btnBgImage" title="上传底图（用于描红参考）">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15l-5-5L5 21"/></svg>底图
+    </button>
     <button class="tb-btn" id="btnImport" title="导入 JSON">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>导入
     </button>
@@ -232,6 +257,7 @@
   <div class="canvas-area mode-select" id="canvasArea">
     <svg id="svgCanvas" xmlns="http://www.w3.org/2000/svg">
       <rect id="bgRect" width="100%" height="100%" fill="#1a1c2e"/>
+      <image id="bgImageEl" x="0" y="0" preserveAspectRatio="xMidYMid meet" style="display:none;pointer-events:none"/>
       <g id="pathGroup"></g>
       <g id="drawingGroup"></g>
       <g id="nodeEditGroup"></g>
@@ -281,6 +307,22 @@
       <div class="layer-btns">
         <button class="layer-btn" id="panelBringForward">▲ 前移一层</button>
         <button class="layer-btn" id="panelSendBackward">▼ 后移一层</button>
+      </div>
+    </div>
+    <div class="panel-section" id="bgImageSection">
+      <div class="panel-title">底图（描红参考）</div>
+      <div class="bg-img-preview" id="bgImgPreview">
+        <span class="bg-img-placeholder" id="bgImgPlaceholder">未上传底图</span>
+        <img id="bgImgThumb" src="" alt="" style="display:none">
+      </div>
+      <div class="bg-img-actions">
+        <button class="bg-img-btn" id="bgImgUploadBtn">📂 上传图片</button>
+        <button class="bg-img-btn danger" id="bgImgRemoveBtn" style="display:none">✕ 移除</button>
+      </div>
+      <div class="bg-img-opacity-row">
+        <span class="prop-label">透明度</span>
+        <input type="range" class="prop-input" id="bgImgOpacity" min="0" max="100" step="1" value="50">
+        <span class="prop-val" id="bgImgOpacityVal">50%</span>
       </div>
     </div>
     <div class="panel-section">
@@ -348,6 +390,7 @@
 
 <div class="drop-overlay" id="dropOverlay">释放鼠标导入 JSON 文件</div>
 <input type="file" id="fileImport" accept=".json,application/json">
+<input type="file" id="fileBgImage" accept="image/*" style="display:none">
 
 <script>
 (function(){
@@ -387,6 +430,17 @@ var selDrag = { active:false, x0:0, y0:0 };
 var moveDrag = { active:false, x0:0, y0:0, origPaths:null };
 // Node drag
 var nodeDrag = { active:false, pathId:null, nodeIdx:-1, handleType:null, origPts:null, origHandles:null };
+// 边拖拽状态（拖动线段中点弯曲）
+var edgeDrag = { active:false, pathId:null, segIdx:-1, origPts:null, origHandles:null };
+// 旋转拖拽状态
+var rotateDrag = {
+  active: false,
+  cx: 0, cy: 0,            // 旋转中心（viewBox坐标）
+  startAngle: 0,            // 鼠标按下时相对旋转中心的角度
+  origAngle: 0,             // 开始时已旋转角度
+  origPaths: null,          // 旋转前所有路径快照
+  shiftSnap: false          // 是否Shift吸附
+};
 
 /* ══════ DOM ══════ */
 var canvasArea    = document.getElementById('canvasArea');
@@ -395,6 +449,7 @@ var pathGroup     = document.getElementById('pathGroup');
 var drawingGroup  = document.getElementById('drawingGroup');
 var nodeEditGroup = document.getElementById('nodeEditGroup');
 var bgRect        = document.getElementById('bgRect');
+var bgImageEl     = document.getElementById('bgImageEl');
 var selRect       = document.getElementById('selectionRect');
 var toastEl       = document.getElementById('toast');
 var statusDotEl   = document.getElementById('statusDot');
@@ -404,6 +459,10 @@ var statusCanvasEl= document.getElementById('statusCanvas');
 var pathCountEl   = document.getElementById('pathCount');
 var selectedCountEl=document.getElementById('selectedCount');
 var layerSection  = document.getElementById('layerSection');
+
+/* ══════ Bg Image State ══════ */
+var bgImageData = null;  // base64 dataURL
+var bgImageOpacity = 0.5;
 
 /* ══════ Utility ══════ */
 function uid(){ return 'p'+(idCounter++); }
@@ -445,6 +504,11 @@ function applyCanvasSize(w,h){
   svgEl.setAttribute('height','100%');
   bgRect.setAttribute('width',w);
   bgRect.setAttribute('height',h);
+  // 同步更新底图尺寸
+  if(bgImageEl && bgImageData){
+    bgImageEl.setAttribute('width',w);
+    bgImageEl.setAttribute('height',h);
+  }
   statusCanvasEl.textContent=w+' × '+h;
   document.getElementById('canvasW').value=w;
   document.getElementById('canvasH').value=h;
@@ -484,9 +548,13 @@ function saveToStorage(){
   clearTimeout(saveTimer);
   saveTimer=setTimeout(function(){
     try{
-      localStorage.setItem(STORAGE_KEY,JSON.stringify({
-        paths:paths, canvasW:canvasW, canvasH:canvasH, bgColor:currentBgColor, idCounter:idCounter
-      }));
+      var payload={paths:paths, canvasW:canvasW, canvasH:canvasH, bgColor:currentBgColor, idCounter:idCounter};
+      // 底图：只在不超过 2MB 时存入 localStorage，避免超配额
+      if(bgImageData && bgImageData.length < 2*1024*1024){
+        payload.bgImageData = bgImageData;
+        payload.bgImageOpacity = bgImageOpacity;
+      }
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(payload));
     }catch(e){}
   },500);
 }
@@ -500,6 +568,10 @@ function loadFromStorage(){
       if(data.canvasW&&data.canvasH) applyCanvasSize(data.canvasW,data.canvasH);
       if(data.bgColor) setBgColor(data.bgColor);
       if(data.idCounter) idCounter=data.idCounter;
+      if(data.bgImageData){
+        bgImageOpacity = (data.bgImageOpacity!==undefined) ? data.bgImageOpacity : 0.5;
+        applyBgImage(data.bgImageData, bgImageOpacity, true); // skipSave=true
+      }
       renderAllPaths();
       pushHistory();
     }
@@ -513,6 +585,83 @@ function setBgColor(hex){
   document.getElementById('bgColor').value=hex;
   document.getElementById('bgHex').value=hex.toUpperCase();
 }
+
+/* ══════ Bg Image ══════ */
+function applyBgImage(dataURL, opacity, skipSave){
+  bgImageData = dataURL;
+  bgImageOpacity = (opacity !== undefined) ? opacity : 0.5;
+  // 更新 SVG image 元素
+  bgImageEl.setAttributeNS('http://www.w3.org/1999/xlink','href', dataURL);
+  bgImageEl.setAttribute('width', canvasW);
+  bgImageEl.setAttribute('height', canvasH);
+  bgImageEl.setAttribute('opacity', bgImageOpacity);
+  bgImageEl.style.display = '';
+  // 更新面板缩略图
+  var thumb = document.getElementById('bgImgThumb');
+  var placeholder = document.getElementById('bgImgPlaceholder');
+  thumb.src = dataURL;
+  thumb.style.display = 'block';
+  placeholder.style.display = 'none';
+  // 显示移除按钮，更新不透明度滑块
+  document.getElementById('bgImgRemoveBtn').style.display = '';
+  var pct = Math.round(bgImageOpacity * 100);
+  document.getElementById('bgImgOpacity').value = pct;
+  document.getElementById('bgImgOpacityVal').textContent = pct + '%';
+  // 更新工具栏按钮状态
+  document.getElementById('btnBgImage').classList.add('active');
+  if(!skipSave) saveToStorage();
+}
+
+function removeBgImage(){
+  bgImageData = null;
+  bgImageEl.removeAttributeNS('http://www.w3.org/1999/xlink','href');
+  bgImageEl.style.display = 'none';
+  var thumb = document.getElementById('bgImgThumb');
+  var placeholder = document.getElementById('bgImgPlaceholder');
+  thumb.src = ''; thumb.style.display = 'none';
+  placeholder.style.display = '';
+  document.getElementById('bgImgRemoveBtn').style.display = 'none';
+  document.getElementById('btnBgImage').classList.remove('active');
+  // 重置 file input，允许重复上传同一文件
+  var fi = document.getElementById('fileBgImage');
+  fi.value = '';
+  saveToStorage();
+  showToast('底图已移除','success');
+}
+
+// 触发文件选择
+function triggerBgImageUpload(){
+  document.getElementById('fileBgImage').click();
+}
+
+// 初始化底图相关事件
+document.getElementById('btnBgImage').addEventListener('click', triggerBgImageUpload);
+document.getElementById('bgImgUploadBtn').addEventListener('click', triggerBgImageUpload);
+document.getElementById('bgImgRemoveBtn').addEventListener('click', removeBgImage);
+
+document.getElementById('fileBgImage').addEventListener('change', function(e){
+  var file = e.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){
+    showToast('请选择图片文件','error'); return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    applyBgImage(ev.target.result, bgImageOpacity);
+    showToast('底图已加载 ✓','success');
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('bgImgOpacity').addEventListener('input', function(){
+  var val = parseInt(this.value);
+  document.getElementById('bgImgOpacityVal').textContent = val + '%';
+  bgImageOpacity = val / 100;
+  if(bgImageData){
+    bgImageEl.setAttribute('opacity', bgImageOpacity);
+    saveToStorage();
+  }
+});
 
 /* ══════ Style helpers ══════ */
 function getDefaultStyle(){ return deepClone(defaultStyle); }
@@ -555,8 +704,9 @@ function makeD_polyline(pts, closed){
 function makeD_bezier(pts, handles, closed){
   if(!pts||pts.length<2) return '';
   var d='M '+pts[0].x.toFixed(1)+' '+pts[0].y.toFixed(1);
-  for(var i=0;i<pts.length-1;i++){
-    var p0=pts[i], p1=pts[i+1];
+  var segTotal = closed ? pts.length : pts.length-1;
+  for(var i=0;i<segTotal;i++){
+    var p0=pts[i], p1=pts[(i+1)%pts.length];
     var h=handles&&handles[i]?handles[i]:{};
     var dx=(p1.x-p0.x), dy=(p1.y-p0.y);
     var cp1x=h.cp1x!==undefined?h.cp1x:p0.x+dx/3;
@@ -625,18 +775,24 @@ function findPath(id){ return paths.find(function(p){return p.id===id;})||null; 
 /* ══════ Mode ══════ */
 function setMode(m){
   cancelDraw();
+  // 切出旋转模式时重置旋转中心
+  if(mode==='rotate'&&m!=='rotate'){
+    rotateDrag.cx=0; rotateDrag.cy=0;
+    rotateDrag.active=false; rotateDrag.movingCenter=false;
+  }
   mode=m;
-  var map={select:'btnSelect','node-edit':'btnNodeEdit',polyline:'btnPolyline',bezier:'btnBezier',freehand:'btnFreehand'};
+  var map={select:'btnSelect','node-edit':'btnNodeEdit',rotate:'btnRotate',polyline:'btnPolyline',bezier:'btnBezier',freehand:'btnFreehand'};
   Object.keys(map).forEach(function(k){document.getElementById(map[k]).classList.remove('active');});
   if(map[m]) document.getElementById(map[m]).classList.add('active');
   canvasArea.className='canvas-area mode-'+m.replace('-','');
-  var names={select:'选择模式','node-edit':'节点编辑',polyline:'折线绘制',bezier:'贝塞尔曲线',freehand:'自由手绘'};
+  var names={select:'选择模式','node-edit':'节点编辑',rotate:'旋转模式',polyline:'折线绘制',bezier:'贝塞尔曲线',freehand:'自由手绘'};
   statusModeEl.textContent=names[m]||m;
-  statusDotEl.className='status-dot'+(m!=='select'&&m!=='node-edit'?' drawing':'');
+  statusDotEl.className='status-dot'+(m!=='select'&&m!=='node-edit'&&m!=='rotate'?' drawing':'');
   document.querySelectorAll('#pathGroup path').forEach(function(el){
     el.style.cursor=m==='select'?'move':'default';
   });
   if(m==='node-edit') renderNodeHandles();
+  else if(m==='rotate') renderRotateHandles();
   else clearNodeHandles();
 }
 
@@ -825,6 +981,86 @@ function sendBackward(){
   pushHistory(); renderAllPaths(); saveToStorage();
 }
 
+/* ══════ Rotate ══════ */
+// 获取一组路径的整体 bbox（用于计算旋转中心）
+function getSelectionBBox(ids){
+  var xs=[],ys=[];
+  ids.forEach(function(id){
+    var p=findPath(id); if(!p||!p.pts) return;
+    p.pts.forEach(function(q){xs.push(q.x);ys.push(q.y);});
+    if(p.handles) p.handles.forEach(function(h){
+      if(!h) return;
+      if(h.cp1x!==undefined){xs.push(h.cp1x);ys.push(h.cp1y);}
+      if(h.cp2x!==undefined){xs.push(h.cp2x);ys.push(h.cp2y);}
+    });
+  });
+  if(!xs.length) return null;
+  var minx=Math.min.apply(null,xs),miny=Math.min.apply(null,ys);
+  var maxx=Math.max.apply(null,xs),maxy=Math.max.apply(null,ys);
+  return{x:minx,y:miny,w:maxx-minx,h:maxy-miny,cx:(minx+maxx)/2,cy:(miny+maxy)/2};
+}
+
+// 渲染旋转模式下的包围框 + 8个方向手柄 + 中心点
+function renderRotateHandles(){
+  clearNodeHandles();
+  var ids=selectedIds.length>0?selectedIds:[];
+  if(!ids.length) return;
+  var bb=getSelectionBBox(ids); if(!bb) return;
+  var pad=18; // 包围框向外扩展
+  var rx=bb.x-pad, ry=bb.y-pad, rw=bb.w+pad*2, rh=bb.h+pad*2;
+  // 虚线包围框
+  var rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  rect.setAttribute('x',rx);rect.setAttribute('y',ry);
+  rect.setAttribute('width',rw);rect.setAttribute('height',rh);
+  rect.setAttribute('class','rotate-bbox');
+  nodeEditGroup.appendChild(rect);
+  // 4个角 + 4条边中点 = 8个旋转手柄
+  var corners=[
+    [rx,ry],[rx+rw/2,ry],[rx+rw,ry],
+    [rx+rw,ry+rh/2],
+    [rx+rw,ry+rh],[rx+rw/2,ry+rh],[rx,ry+rh],
+    [rx,ry+rh/2]
+  ];
+  corners.forEach(function(c){
+    var circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',c[0]);circle.setAttribute('cy',c[1]);circle.setAttribute('r',7);
+    circle.setAttribute('class','rotate-handle');
+    circle.setAttribute('data-type','rotate-handle');
+    nodeEditGroup.appendChild(circle);
+  });
+  // 中心点（可拖动改变旋转中心）
+  var cpt=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  cpt.setAttribute('cx',rotateDrag.cx||bb.cx);
+  cpt.setAttribute('cy',rotateDrag.cy||bb.cy);
+  cpt.setAttribute('r',5);
+  cpt.setAttribute('class','rotate-center');
+  cpt.setAttribute('data-type','rotate-center');
+  nodeEditGroup.appendChild(cpt);
+  // 十字线（帮助识别中心位置）
+  var cx2=rotateDrag.cx||bb.cx, cy2=rotateDrag.cy||bb.cy;
+  var lh=makeLine(cx2-10,cy2,cx2+10,cy2); lh.setAttribute('class','ctrl-line'); nodeEditGroup.appendChild(lh);
+  var lv=makeLine(cx2,cy2-10,cx2,cy2+10); lv.setAttribute('class','ctrl-line'); nodeEditGroup.appendChild(lv);
+}
+
+// 旋转一个点绕 (cx,cy) 旋转 rad 弧度
+function rotatePoint(x,y,cx,cy,rad){
+  var cos=Math.cos(rad), sin=Math.sin(rad);
+  var dx=x-cx, dy=y-cy;
+  return{x:cx+dx*cos-dy*sin, y:cy+dx*sin+dy*cos};
+}
+
+// 将路径所有坐标（pts + handles）绕中心旋转 rad
+function rotatePath(p, cx, cy, rad){
+  p.pts=p.pts.map(function(pt){return rotatePoint(pt.x,pt.y,cx,cy,rad);});
+  if(p.handles) p.handles=p.handles.map(function(h){
+    if(!h) return h;
+    var nh={};
+    if(h.cp1x!==undefined){var r1=rotatePoint(h.cp1x,h.cp1y,cx,cy,rad);nh.cp1x=r1.x;nh.cp1y=r1.y;}
+    if(h.cp2x!==undefined){var r2=rotatePoint(h.cp2x,h.cp2y,cx,cy,rad);nh.cp2x=r2.x;nh.cp2y=r2.y;}
+    return nh;
+  });
+}
+
 /* ══════ Node edit ══════ */
 function clearNodeHandles(){
   while(nodeEditGroup.firstChild) nodeEditGroup.removeChild(nodeEditGroup.firstChild);
@@ -835,27 +1071,52 @@ function renderNodeHandles(){
   idsToShow.forEach(function(id){
     var p=findPath(id);
     if(!p) return;
-    // draw bezier control lines first
+    // draw bezier control lines & handles first
     if(p.type==='bezier'&&p.handles){
-      p.handles.forEach(function(h,i){
-        if(!h) return;
-        var p0=p.pts[i], p1=p.pts[i+1];
-        if(!p1) return;
-        if(h.cp1x!==undefined){
-          var l1=makeLine(p0.x,p0.y,h.cp1x,h.cp1y);
+      var ctrlSegCount = p.closed ? p.pts.length : p.pts.length - 1;
+      for(var ci=0;ci<ctrlSegCount;ci++){
+        var ch=p.handles[ci];
+        if(!ch) continue;
+        var cp0=p.pts[ci], cp1=p.pts[(ci+1)%p.pts.length];
+        if(!cp0||!cp1) continue;
+        if(ch.cp1x!==undefined){
+          var l1=makeLine(cp0.x,cp0.y,ch.cp1x,ch.cp1y);
           nodeEditGroup.appendChild(l1);
-          var c1=makeCtrlCircle(h.cp1x,h.cp1y,id,i,'cp1');
+          var c1=makeCtrlCircle(ch.cp1x,ch.cp1y,id,ci,'cp1');
           nodeEditGroup.appendChild(c1);
         }
-        if(h.cp2x!==undefined){
-          var l2=makeLine(p1.x,p1.y,h.cp2x,h.cp2y);
+        if(ch.cp2x!==undefined){
+          var l2=makeLine(cp1.x,cp1.y,ch.cp2x,ch.cp2y);
           nodeEditGroup.appendChild(l2);
-          var c2=makeCtrlCircle(h.cp2x,h.cp2y,id,i,'cp2');
+          var c2=makeCtrlCircle(ch.cp2x,ch.cp2y,id,ci,'cp2');
           nodeEditGroup.appendChild(c2);
         }
-      });
+      }
     }
-    // draw anchor nodes
+    // draw edge midpoint handles（每段线段中点，用于弯曲调整）
+    var segCount = p.closed ? p.pts.length : p.pts.length - 1;
+    for(var ei=0;ei<segCount;ei++){
+      var ep0=p.pts[ei], ep1=p.pts[(ei+1)%p.pts.length];
+      // bezier：用曲线中点而非直线中点，让handle贴在曲线上
+      var mx,my;
+      var seg_h2=(p.type==='bezier'&&p.handles)?p.handles[ei]:null;
+      var hasCtrl=seg_h2&&(seg_h2.cp1x!==undefined||seg_h2.cp2x!==undefined);
+      if(hasCtrl){
+        var ecp1x=seg_h2.cp1x!==undefined?seg_h2.cp1x:ep0.x+(ep1.x-ep0.x)/3;
+        var ecp1y=seg_h2.cp1y!==undefined?seg_h2.cp1y:ep0.y+(ep1.y-ep0.y)/3;
+        var ecp2x=seg_h2.cp2x!==undefined?seg_h2.cp2x:ep0.x+2*(ep1.x-ep0.x)/3;
+        var ecp2y=seg_h2.cp2y!==undefined?seg_h2.cp2y:ep0.y+2*(ep1.y-ep0.y)/3;
+        // t=0.5 的贝塞尔曲线中点
+        var et=0.5, emt=1-et;
+        mx=emt*emt*emt*ep0.x+3*emt*emt*et*ecp1x+3*emt*et*et*ecp2x+et*et*et*ep1.x;
+        my=emt*emt*emt*ep0.y+3*emt*emt*et*ecp1y+3*emt*et*et*ecp2y+et*et*et*ep1.y;
+      } else {
+        mx=(ep0.x+ep1.x)/2; my=(ep0.y+ep1.y)/2;
+      }
+      var eh=makeEdgeHandle(mx,my,id,ei);
+      nodeEditGroup.appendChild(eh);
+    }
+    // draw anchor nodes（最后画，层级在上方）
     p.pts.forEach(function(pt,i){
       var c=document.createElementNS('http://www.w3.org/2000/svg','circle');
       c.setAttribute('cx',pt.x); c.setAttribute('cy',pt.y); c.setAttribute('r',NODE_R);
@@ -877,6 +1138,18 @@ function makeCtrlCircle(x,y,pid,i,type){
   c.setAttribute('data-pid',pid);c.setAttribute('data-idx',i);c.setAttribute('data-type',type);
   return c;
 }
+// 边中点控制柄：菱形（用旋转45°的矩形表示）
+function makeEdgeHandle(mx,my,pid,segIdx){
+  var s=6; // 半边长
+  var pts=[[0,-s],[s,0],[0,s],[-s,0]].map(function(p){return (mx+p[0])+','+(my+p[1]);}).join(' ');
+  var poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  poly.setAttribute('points',pts);
+  poly.setAttribute('class','edge-handle');
+  poly.setAttribute('data-pid',pid);
+  poly.setAttribute('data-idx',segIdx);
+  poly.setAttribute('data-type','edge');
+  return poly;
+}
 function updatePathD(p){
   if(p.type==='bezier') p.d=makeD_bezier(p.pts,p.handles,p.closed);
   else p.d=makeD_polyline(p.pts,p.closed);
@@ -897,15 +1170,26 @@ function applyStyleToSelected(key,val){
 }
 
 /* ══════ Export / Download ══════ */
-function buildSVGString(){
+function buildSVGString(includeBgImage){
   var svgOut=document.createElementNS('http://www.w3.org/2000/svg','svg');
   svgOut.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  svgOut.setAttribute('xmlns:xlink','http://www.w3.org/1999/xlink');
   svgOut.setAttribute('width',canvasW);
   svgOut.setAttribute('height',canvasH);
   svgOut.setAttribute('viewBox','0 0 '+canvasW+' '+canvasH);
   var bg=document.createElementNS('http://www.w3.org/2000/svg','rect');
   bg.setAttribute('width',canvasW);bg.setAttribute('height',canvasH);bg.setAttribute('fill',currentBgColor);
   svgOut.appendChild(bg);
+  // 底图层（默认包含，传 false 可排除）
+  if(includeBgImage!==false && bgImageData){
+    var imgEl=document.createElementNS('http://www.w3.org/2000/svg','image');
+    imgEl.setAttribute('x','0');imgEl.setAttribute('y','0');
+    imgEl.setAttribute('width',canvasW);imgEl.setAttribute('height',canvasH);
+    imgEl.setAttribute('preserveAspectRatio','xMidYMid meet');
+    imgEl.setAttribute('opacity', bgImageOpacity);
+    imgEl.setAttributeNS('http://www.w3.org/1999/xlink','href',bgImageData);
+    svgOut.appendChild(imgEl);
+  }
   paths.forEach(function(p){
     var el=document.createElementNS('http://www.w3.org/2000/svg','path');
     el.setAttribute('d',p.d);
@@ -1045,6 +1329,45 @@ function onDown(e){
         return;
       }
     }
+    // 拖动边中点（edge-handle）：启动 edgeDrag
+    if(pid&&type==='edge'){
+      var ep=findPath(pid);
+      if(ep){
+        edgeDrag.active=true;
+        edgeDrag.pathId=pid;
+        edgeDrag.segIdx=idx;
+        edgeDrag.origPts=deepClone(ep.pts);
+        edgeDrag.origHandles=deepClone(ep.handles||[]);
+        return;
+      }
+    }
+    return;
+  }
+
+  if(mode==='rotate'){
+    var rtgt=e.target||e.srcElement;
+    var rtype=rtgt.getAttribute('data-type');
+    // 点击中心点：开始拖动中心
+    if(rtype==='rotate-center'){
+      rotateDrag.movingCenter=true;
+      rotateDrag.active=false;
+      return;
+    }
+    // 点击旋转手柄或画布空白：开始旋转拖拽
+    if(rtype==='rotate-handle'||!rtype||rtype===''){
+      if(selectedIds.length===0) return;
+      var rbb=getSelectionBBox(selectedIds); if(!rbb) return;
+      // 如果还没有设置中心，初始化为 bbox 中心
+      if(!rotateDrag.cx && !rotateDrag.cy){
+        rotateDrag.cx=rbb.cx; rotateDrag.cy=rbb.cy;
+      }
+      rotateDrag.active=true;
+      rotateDrag.movingCenter=false;
+      rotateDrag.startAngle=Math.atan2(pt.y-rotateDrag.cy, pt.x-rotateDrag.cx);
+      rotateDrag.origPaths=deepClone(paths);
+      rotateDrag.shiftSnap=e.shiftKey;
+      return;
+    }
     return;
   }
 
@@ -1098,13 +1421,22 @@ function onMove(e){
     if(nodeDrag.handleType==='anchor'){
       var dx=pt.x-p.pts[nodeDrag.nodeIdx].x, dy=pt.y-p.pts[nodeDrag.nodeIdx].y;
       p.pts[nodeDrag.nodeIdx]={x:pt.x,y:pt.y};
-      // move associated handles
+      // move associated handles（含闭合路径的环绕索引）
       if(p.handles&&p.type==='bezier'){
-        if(p.handles[nodeDrag.nodeIdx-1]&&p.handles[nodeDrag.nodeIdx-1].cp2x!==undefined){
-          p.handles[nodeDrag.nodeIdx-1].cp2x+=dx;p.handles[nodeDrag.nodeIdx-1].cp2y+=dy;
+        var ni=nodeDrag.nodeIdx;
+        var lastSeg=p.pts.length-1; // 闭合段索引
+        // 前一段的 cp2（当前节点为该段的终点）
+        var prevSeg = ni>0 ? ni-1 : (p.closed ? lastSeg : -1);
+        if(prevSeg>=0&&p.handles[prevSeg]&&p.handles[prevSeg].cp2x!==undefined){
+          p.handles[prevSeg].cp2x+=dx; p.handles[prevSeg].cp2y+=dy;
         }
-        if(p.handles[nodeDrag.nodeIdx]&&p.handles[nodeDrag.nodeIdx].cp1x!==undefined){
-          p.handles[nodeDrag.nodeIdx].cp1x+=dx;p.handles[nodeDrag.nodeIdx].cp1y+=dy;
+        // 当前段的 cp1（当前节点为该段的起点）
+        var curSeg = ni<p.pts.length-1 ? ni : (p.closed ? lastSeg : -1);
+        // 对闭合路径，pts[last] 对应闭合段（handles[lastSeg]）的起点
+        if(ni===p.pts.length-1&&p.closed) curSeg=lastSeg;
+        else curSeg=ni;
+        if(curSeg>=0&&p.handles[curSeg]&&p.handles[curSeg].cp1x!==undefined){
+          p.handles[curSeg].cp1x+=dx; p.handles[curSeg].cp1y+=dy;
         }
       }
     } else if(nodeDrag.handleType==='cp1'){
@@ -1116,6 +1448,66 @@ function onMove(e){
     }
     updatePathD(p);
     renderNodeHandles();
+    return;
+  }
+
+  // 边中点拖拽：调整曲线弯曲度
+  if(mode==='node-edit'&&edgeDrag.active){
+    var p=findPath(edgeDrag.pathId); if(!p) return;
+    var si=edgeDrag.segIdx;
+    var p0=p.pts[si], p1=p.pts[(si+1)%p.pts.length];
+    if(!p0||!p1) return;
+    // 确保 handles 数组足够长，并且路径类型升级为 bezier
+    if(!p.handles) p.handles=[];
+    while(p.handles.length<=si) p.handles.push({});
+    if(!p.handles[si]) p.handles[si]={};
+    // 计算从原始直线中点到当前鼠标的偏移量（用来确定控制点偏移）
+    var origMx=(edgeDrag.origPts[si].x+edgeDrag.origPts[(si+1)%edgeDrag.origPts.length].x)/2;
+    var origMy=(edgeDrag.origPts[si].y+edgeDrag.origPts[(si+1)%edgeDrag.origPts.length].y)/2;
+    var offX=pt.x-origMx, offY=pt.y-origMy;
+    // cp1 靠近 p0 侧，cp2 靠近 p1 侧，两者相对于各锚点的位置由 offset 驱动
+    p.handles[si].cp1x = p0.x + (p1.x-p0.x)/4 + offX;
+    p.handles[si].cp1y = p0.y + (p1.y-p0.y)/4 + offY;
+    p.handles[si].cp2x = p0.x + 3*(p1.x-p0.x)/4 + offX;
+    p.handles[si].cp2y = p0.y + 3*(p1.y-p0.y)/4 + offY;
+    // 如果原路径是 polyline/freehand，升级为 bezier 类型并补齐 handles
+    if(p.type!=='bezier'){
+      p.type='bezier';
+      while(p.handles.length<p.pts.length-1+(p.closed?1:0)) p.handles.push({});
+    }
+    updatePathD(p);
+    renderNodeHandles();
+    return;
+  }
+
+  // 旋转拖拽：onMove
+  if(mode==='rotate'){
+    // 拖动旋转中心
+    if(rotateDrag.movingCenter){
+      rotateDrag.cx=pt.x; rotateDrag.cy=pt.y;
+      renderRotateHandles();
+      return;
+    }
+    // 旋转拖拽
+    if(rotateDrag.active&&rotateDrag.origPaths){
+      var curAngle=Math.atan2(pt.y-rotateDrag.cy, pt.x-rotateDrag.cx);
+      var deltaRad=curAngle-rotateDrag.startAngle;
+      // Shift 吸附到 30° 刻度
+      if(e.shiftKey){
+        var snap=Math.PI/6; // 30°
+        deltaRad=Math.round(deltaRad/snap)*snap;
+      }
+      // 从原始快照重建，避免累积误差
+      paths=deepClone(rotateDrag.origPaths);
+      selectedIds.forEach(function(id){
+        var p=findPath(id); if(!p) return;
+        rotatePath(p, rotateDrag.cx, rotateDrag.cy, deltaRad);
+        updatePathD(p);
+      });
+      renderAllPaths();
+      renderRotateHandles();
+      return;
+    }
     return;
   }
 
@@ -1179,6 +1571,22 @@ function onUp(e){
     return;
   }
 
+  if(mode==='node-edit'&&edgeDrag.active){
+    edgeDrag.active=false;
+    edgeDrag.pathId=null; edgeDrag.segIdx=-1;
+    pushHistory(); saveToStorage();
+    return;
+  }
+
+  if(mode==='rotate'&&(rotateDrag.active||rotateDrag.movingCenter)){
+    rotateDrag.active=false;
+    rotateDrag.movingCenter=false;
+    rotateDrag.origPaths=null;
+    pushHistory(); saveToStorage();
+    renderRotateHandles();
+    return;
+  }
+
   if(mode==='select'){
     if(moveDrag.active){
       moveDrag.active=false;
@@ -1227,6 +1635,7 @@ document.addEventListener('keydown',function(e){
   if(!ctrl){
     if(e.key==='v'||e.key==='V') setMode('select');
     else if(e.key==='n'||e.key==='N') setMode('node-edit');
+    else if(e.key==='r'||e.key==='R') setMode('rotate');
     else if(e.key==='l'||e.key==='L') setMode('polyline');
     else if(e.key==='b'||e.key==='B') setMode('bezier');
     else if(e.key==='f'||e.key==='F') setMode('freehand');
@@ -1328,6 +1737,7 @@ document.getElementById('applySize').addEventListener('click',function(){
 /* ══════ Toolbar Buttons ══════ */
 document.getElementById('btnSelect').addEventListener('click',function(){setMode('select');});
 document.getElementById('btnNodeEdit').addEventListener('click',function(){setMode('node-edit');});
+document.getElementById('btnRotate').addEventListener('click',function(){setMode('rotate');});
 document.getElementById('btnPolyline').addEventListener('click',function(){setMode('polyline');});
 document.getElementById('btnBezier').addEventListener('click',function(){setMode('bezier');});
 document.getElementById('btnFreehand').addEventListener('click',function(){setMode('freehand');});
