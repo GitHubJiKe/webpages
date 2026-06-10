@@ -379,6 +379,7 @@
     .card-icon.cover { background: linear-gradient(135deg, #1d1d28, #2a2a3a); color: #e2c28a; }
     .card-icon.soon       { background: var(--paper-deep); color: var(--text-muted); }
     .card-icon.svg-canvas { background: linear-gradient(135deg, #e8f0ff, #d0e0f8); color: #3b6fd4; }
+    .card-icon.diff       { background: linear-gradient(135deg, #e8f5f0, #c8e8dc); color: #2e7d6e; }
 
     .card p {
       font-size: 13px;
@@ -405,6 +406,7 @@
     .card-tag.cover      { background: rgba(226, 194, 138, 0.12); color: #b8954a; }
     .card-tag.soon       { background: var(--paper-deep); color: var(--text-muted); }
     .card-tag.svg-canvas { background: rgba(59, 111, 212, 0.1); color: #3b6fd4; }
+    .card-tag.diff       { background: rgba(46, 125, 110, 0.1); color: #2e7d6e; }
 
     /* 占位卡片特殊样式 */
     .card.placeholder {
@@ -687,6 +689,22 @@
             </div>
           </div>
           <p>自由绘制矢量路径，支持折线/贝塞尔/手绘三种模式，节点编辑，导出 SVG / PNG</p>
+        </a>
+
+        <!-- 字符串对比 -->
+        <a href="string-diff/" class="card">
+          <div class="card-top">
+            <div class="card-icon diff">
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01"/>
+              </svg>
+            </div>
+            <div class="card-head">
+              <h3>字符串对比</h3>
+              <span class="card-tag diff">开发</span>
+            </div>
+          </div>
+          <p>左右双栏输入，差异高亮标红/标绿，支持字符级/词语级/行级三种粒度对比，汇总统计</p>
         </a>
         </div>
 
