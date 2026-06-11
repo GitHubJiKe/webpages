@@ -264,6 +264,9 @@
     </button>
   </div>
   <div style="flex:1"></div>
+  <button class="tb-btn" id="btnZoomReset" title="重置缩放 (Ctrl+0)">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M8 11h6M11 8v6"/></svg>1:1
+  </button>
   <button class="tb-btn" id="btnHelp" title="快捷键帮助 (?)">
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3m0 4h.01"/></svg>
     帮助
@@ -292,7 +295,7 @@
       <g id="pathGroup"></g>
       <g id="drawingGroup"></g>
       <g id="nodeEditGroup"></g>
-      <rect id="selectionRect" fill="rgba(91,155,213,.1)" stroke="#5b9bd5" stroke-width="1" stroke-dasharray="4,3" style="display:none"/>
+      <g id="selGroup"><rect id="selectionRect" fill="rgba(91,155,213,.1)" stroke="#5b9bd5" stroke-width="1" stroke-dasharray="4,3" style="display:none"/></g>
     </svg>
   </div>
   <aside class="panel" id="sidePanel">
@@ -465,6 +468,7 @@
           <div class="help-row"><span class="help-desc">闭合路径</span><div class="help-keys"><kbd class="kbd">⌘</kbd><span class="kbd-plus">+</span><kbd class="kbd">Enter</kbd><span class="kbd-plus"> / </span><span class="help-desc" style="font-size:12px;color:var(--text-secondary)">点击起点</span></div></div>
           <div class="help-row"><span class="help-desc">取消当前绘制</span><div class="help-keys"><kbd class="kbd">Esc</kbd></div></div>
           <div class="help-row"><span class="help-desc">缩放画布</span><div class="help-keys"><kbd class="kbd">⌘</kbd><span class="kbd-plus">+</span><span class="help-desc" style="font-size:12px;color:var(--text-secondary)">滚轮</span></div></div>
+          <div class="help-row"><span class="help-desc">重置缩放（1:1）</span><div class="help-keys"><kbd class="kbd">⌘</kbd><span class="kbd-plus">+</span><kbd class="kbd">0</kbd></div></div>
         </div>
       </div>
 
@@ -1947,6 +1951,7 @@ document.getElementById('applySize').addEventListener('click',function(){
 document.getElementById('btnSelect').addEventListener('click',function(){setMode('select');});
 document.getElementById('btnNodeEdit').addEventListener('click',function(){setMode('node-edit');});
 document.getElementById('btnRotate').addEventListener('click',function(){setMode('rotate');});
+document.getElementById('btnZoomReset').addEventListener('click',function(){resetViewport();showToast('缩放已重置 ✓','success');});
 document.getElementById('btnPolyline').addEventListener('click',function(){setMode('polyline');});
 document.getElementById('btnBezier').addEventListener('click',function(){setMode('bezier');});
 document.getElementById('btnFreehand').addEventListener('click',function(){setMode('freehand');});
@@ -2101,6 +2106,12 @@ function applyViewport(){
   pathGroup.setAttribute('transform', t);
   drawingGroup.setAttribute('transform', t);
   nodeEditGroup.setAttribute('transform', t);
+  var selGroup = document.getElementById('selGroup');
+  if(selGroup) selGroup.setAttribute('transform', t);
+  // selRect stroke 补偿：让边框在屏幕上始终显示为 1px
+  var invScale = 1 / vp.scale;
+  selRect.setAttribute('stroke-width', invScale);
+  selRect.setAttribute('stroke-dasharray', (4*invScale)+','+(3*invScale));
   // 状态栏提示缩放比
   statusCanvasEl.textContent = canvasW+' × '+canvasH+'  ('+Math.round(vp.scale*100)+'%)';
 }
