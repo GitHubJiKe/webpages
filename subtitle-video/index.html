@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subtitle Video</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+
+  <style>
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* 自定义字体 */
+    @font-face {
+      font-family: 'Long Cang';
+      src: url('Long_Cang/LongCang-Regular.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: "Long Cang", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      background: #000;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* 视频背景 */
+    #bg-video {
+      position: fixed; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      z-index: 0;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+    #bg-video.active { opacity: 1; }
+
+    /* ========== 舞台：flex 布局，根据图片位置切换方向 ========== */
+    #stage {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      transition: background 0.6s ease;
+    }
+
+    #stage.bg-image {
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    /* 默认无图：句子区居中占满 */
+    #stage.layout-none {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 图左文右 */
+    #stage.layout-left {
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 图右文左 */
+    #stage.layout-right {
+      flex-direction: row-reverse;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 图上文下 */
+    #stage.layout-top {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 图下文上 */
+    #stage.layout-bottom {
+      flex-direction: column-reverse;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ========== 图片面板 ========== */
+    #image-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      pointer-events: none;
+    }
+
+    #image-panel.visible {
+      opacity: 1;
+    }
+
+    /* 左右布局：图片面板占 40% 宽度 */
+    #stage.layout-left #image-panel,
+    #stage.layout-right #image-panel {
+      width: 40%;
+      height: 100%;
+      padding: 40px;
+    }
+
+    /* 上下布局：图片面板占 35% 高度 */
+    #stage.layout-top #image-panel,
+    #stage.layout-bottom #image-panel {
+      width: 100%;
+      height: 35%;
+      padding: 30px 60px;
+    }
+
+    #image-panel img {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 12px;
+      object-fit: contain;
+      box-shadow: 0 4px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    /* ========== 句子区 ========== */
+    #sentence-area {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 14px;
+      padding: 80px 60px 80px 100px;
+    }
+
+    /* 无图时句子区占满 */
+    #stage.layout-none #sentence-area {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 左右布局：句子区占 60% 宽度 */
+    #stage.layout-left #sentence-area,
+    #stage.layout-right #sentence-area {
+      width: 60%;
+      height: 100%;
+      align-items: flex-start;
+      padding: 80px 60px 80px 80px;
+    }
+
+    /* 上下布局：句子区占 65% 高度 */
+    #stage.layout-top #sentence-area,
+    #stage.layout-bottom #sentence-area {
+      width: 100%;
+      height: 65%;
+      align-items: flex-start;
+      padding: 80px 60px 80px 100px;
+    }
+
+    .sentence {
+      text-align: left;
+      max-width: 90%;
+      word-break: break-word;
+      white-space: pre-wrap;
+      transition: all 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+      text-shadow:
+        -3px -3px 0 #000,
+        3px -3px 0 #000,
+        -3px 3px 0 #000,
+        3px 3px 0 #000,
+        0 -3px 0 #000,
+        0 3px 0 #000,
+        -3px 0 0 #000,
+        3px 0 0 #000,
+        0 0 12px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    /* animate.css */
+    .sentence.animate__animated {
+      animation-fill-mode: both;
+    }
+
+    .sentence.is-exiting {
+      --animate-duration: 0.3s;
+      pointer-events: none;
+    }
+
+    /* 层级：t-0=最新最大，数字越大越旧越小 */
+    .sentence.t-0 {
+      font-size: 52px !important;
+      opacity: 1.00 !important;
+    }
+
+    .sentence.t-1 {
+      font-size: 44px !important;
+      opacity: 0.88 !important;
+    }
+
+    .sentence.t-2 {
+      font-size: 34px !important;
+      opacity: 0.65 !important;
+    }
+
+    .sentence.t-3 {
+      font-size: 26px !important;
+      opacity: 0.45 !important;
+    }
+
+    .sentence.t-4 {
+      font-size: 20px !important;
+      opacity: 0.30 !important;
+    }
+  </style>
+</head>
+
+<body>
+
+  <video id="bg-video" muted loop playsinline></video>
+
+  <div id="stage" class="layout-none">
+    <div id="image-panel"></div>
+    <div id="sentence-area"></div>
+  </div>
+
+  <script>
+    (async function () {
+      const ANIM_MAP = {
+        fadeUp: 'animate__fadeInUp', fadeIn: 'animate__fadeIn',
+        slideLeft: 'animate__slideInLeft', slideRight: 'animate__slideInRight',
+        scale: 'animate__zoomIn', bounce: 'animate__bounceIn',
+        flip: 'animate__flipInX', lightSpeed: 'animate__lightSpeedInRight',
+        backIn: 'animate__backInDown',
+        fadeOut: 'animate__fadeOut', slideUp: 'animate__slideOutUp',
+      };
+      function resolveAnim(name, fallback) {
+        if (!name) return fallback;
+        return name.startsWith('animate__') ? name : (ANIM_MAP[name] || fallback);
+      }
+
+      const CONFIG = {
+        sentenceDuration: 2800,
+        sentenceGap: 400,
+        pageTransition: 800,
+        imageDelay: 1000,        // 图片比文字晚出现/消失的毫秒数
+        defaultAnimIn: 'animate__fadeInUp',
+        defaultAnimOut: 'animate__fadeOut',
+      };
+
+      const $stage = document.getElementById('stage');
+      const $area = document.getElementById('sentence-area');
+      const $imgPanel = document.getElementById('image-panel');
+      const $bgVideo = document.getElementById('bg-video');
+
+      let pages = [];
+      let pageIndex = 0;
+      let sentIndex = 0;
+      let isPlaying = true;
+      let timer = null;
+      let imgTimer = null;       // 图片延迟定时器
+      let activeImgSentence = null; // 当前正在展示图片的句子索引
+
+      // ==================== 加载数据 ====================
+      try {
+        const res = await fetch('./data.json');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        pages = await res.json();
+        if (!Array.isArray(pages) || pages.length === 0) throw new Error('数据为空');
+      } catch (e) { console.error('加载 data.json 失败:', e); return; }
+
+      function getPage(p) { return pages[p]; }
+      function totalPages() { return pages.length; }
+      function totalSents(p) { return getPage(p).sentences.length; }
+
+      // ==================== 背景 ====================
+      function isVideoUrl(s) {
+        return /\.(webm|mp4|mov|avi)(\?.*)?$/i.test(s || '');
+      }
+      function renderBg(pageData) {
+        const bg = pageData.background || '#000';
+        $bgVideo.classList.remove('active');
+        $stage.classList.remove('bg-image');
+        $stage.style.backgroundImage = '';
+
+        if (isVideoUrl(bg)) {
+          $bgVideo.src = bg;
+          $bgVideo.classList.add('active');
+          $bgVideo.play().catch(() => {});
+        } else if (/\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(bg || '')) {
+          $stage.classList.add('bg-image');
+          $stage.style.backgroundImage = `url(${bg})`;
+        } else {
+          $stage.style.background = bg;
+        }
+      }
+
+      // ==================== 图片面板 ====================
+      function setLayout(pos) {
+        $stage.classList.remove('layout-none', 'layout-left', 'layout-right', 'layout-top', 'layout-bottom');
+        $stage.classList.add('layout-' + (pos || 'none'));
+      }
+
+      function clearImageTimer() {
+        if (imgTimer) { clearTimeout(imgTimer); imgTimer = null; }
+      }
+
+      function showImages(images, pos) {
+        clearImageTimer();
+        setLayout(pos);
+        $imgPanel.innerHTML = '';
+        images.forEach(img => {
+          const el = document.createElement('img');
+          el.src = img.src;
+          if (img.alt) el.alt = img.alt;
+          $imgPanel.appendChild(el);
+        });
+        imgTimer = setTimeout(() => {
+          $imgPanel.classList.add('visible');
+          imgTimer = null;
+        }, CONFIG.imageDelay);
+      }
+
+      function hideImages() {
+        clearImageTimer();
+        imgTimer = setTimeout(() => {
+          $imgPanel.classList.remove('visible');
+          imgTimer = null;
+          setTimeout(() => {
+            if (!$imgPanel.classList.contains('visible')) {
+              $imgPanel.innerHTML = '';
+              setLayout('none');
+            }
+          }, 500);
+        }, CONFIG.imageDelay);
+      }
+
+      // ==================== 更新层级 + 图片联动 ====================
+      function updateTiers() {
+        const els = $area.querySelectorAll('.sentence:not(.is-exiting)');
+        const total = els.length;
+        if (total === 0) return;
+
+        // 找到 t-0（最新句）的索引
+        let t0Index = -1;
+        els.forEach((el, i) => {
+          el.classList.forEach(c => { if (c.startsWith('t-')) el.classList.remove(c); });
+          const tier = Math.min(total - 1 - i, 4);
+          el.classList.add('t-' + tier);
+          if (tier === 0) t0Index = i;
+        });
+
+        // 图片联动：检查当前最新句是否有 images
+        if (t0Index >= 0) {
+          const el = els[t0Index];
+          const sentIdx = el.dataset.sentIdx != null ? parseInt(el.dataset.sentIdx) : -1;
+          const sent = sentIdx >= 0 ? getPage(pageIndex).sentences[sentIdx] : null;
+
+          if (sent && sent.images && sent.images.length) {
+            const pos = sent.images[0].position || 'right';
+            // 如果图片没变，不重复触发
+            if (activeImgSentence !== sentIdx) {
+              activeImgSentence = sentIdx;
+              showImages(sent.images, pos);
+            }
+          } else if (activeImgSentence !== null) {
+            // 最新句没有图片 → 隐藏
+            activeImgSentence = null;
+            hideImages();
+          }
+        }
+      }
+
+      // ==================== 添加一句话 ====================
+      function showSentence(pi, si) {
+        const page = getPage(pi);
+        const sent = page.sentences[si];
+        const el = document.createElement('div');
+        el.className = 'sentence animate__animated';
+
+        const animIn = resolveAnim(sent.animation, CONFIG.defaultAnimIn);
+        const animOut = resolveAnim(sent.animOut, CONFIG.defaultAnimOut);
+        animIn.split(' ').forEach(c => el.classList.add(c));
+        el.dataset.animOut = animOut;
+        el.dataset.sentIdx = si;
+
+        if (sent.style) el.style.cssText = sent.style;
+        el.textContent = sent.content;
+        $area.appendChild(el);
+
+        updateTiers();
+      }
+
+      // ==================== 清空当前页全部句子 ====================
+      function exitPage(callback) {
+        // 先隐藏图片
+        hideImages();
+        activeImgSentence = null;
+
+        const els = $area.querySelectorAll('.sentence:not(.is-exiting)');
+        if (els.length === 0) { callback(); return; }
+
+        els.forEach(el => {
+          el.classList.add('is-exiting');
+          const toRemove = [];
+          el.classList.forEach(c => {
+            if (c.startsWith('animate__') && c !== 'animate__animated') toRemove.push(c);
+          });
+          toRemove.forEach(c => el.classList.remove(c));
+          const animOut = el.dataset.animOut || CONFIG.defaultAnimOut;
+          animOut.split(' ').forEach(c => el.classList.add(c));
+        });
+
+        setTimeout(() => {
+          $area.innerHTML = '';
+          callback();
+        }, 500);
+      }
+
+      // ==================== 翻页 ====================
+      function goToPage(idx) {
+        if (idx < 0 || idx >= totalPages()) return;
+        clearTimeout(timer);
+        clearImageTimer();
+        timer = null;
+
+        exitPage(() => {
+          pageIndex = idx;
+          sentIndex = 0;
+          renderBg(getPage(pageIndex));
+          showSentence(pageIndex, sentIndex);
+          if (isPlaying) scheduleNext();
+        });
+      }
+
+      // ==================== 调度 ====================
+      function scheduleNext() {
+        clearTimeout(timer);
+        const sents = getPage(pageIndex).sentences;
+        const cur = sents[sentIndex];
+        const dur = cur.duration ?? CONFIG.sentenceDuration;
+        const gap = cur.gap ?? CONFIG.sentenceGap;
+
+        timer = setTimeout(() => {
+          if (sentIndex < sents.length - 1) {
+            sentIndex++;
+            showSentence(pageIndex, sentIndex);
+            if (isPlaying) scheduleNext();
+          } else if (pageIndex < totalPages() - 1) {
+            setTimeout(() => {
+              goToPage(pageIndex + 1);
+              if (isPlaying) scheduleNext();
+            }, CONFIG.pageTransition);
+          } else {
+            isPlaying = false;
+          }
+        }, dur + gap);
+      }
+
+      // ==================== 播放控制 ====================
+      function togglePlay() {
+        const lastPage = totalPages() - 1;
+        if (pageIndex === lastPage && sentIndex >= totalSents(pageIndex) - 1 && !isPlaying) {
+          goToPage(0);
+          isPlaying = true;
+          scheduleNext();
+          return;
+        }
+        isPlaying = !isPlaying;
+        if (isPlaying) scheduleNext();
+        else clearTimeout(timer);
+      }
+
+      function resetAll() {
+        clearTimeout(timer);
+        clearImageTimer();
+        timer = null;
+        isPlaying = true;
+        goToPage(0);
+        scheduleNext();
+      }
+
+      // ==================== 快捷键 ====================
+      document.addEventListener('keydown', e => {
+        switch (e.code) {
+          case 'Space': e.preventDefault(); togglePlay(); break;
+          case 'ArrowRight':
+            e.preventDefault();
+            if (pageIndex < totalPages() - 1) { goToPage(pageIndex + 1); if (isPlaying) scheduleNext(); }
+            break;
+          case 'ArrowLeft':
+            e.preventDefault();
+            if (pageIndex > 0) { goToPage(pageIndex - 1); if (isPlaying) scheduleNext(); }
+            break;
+          case 'KeyR': e.preventDefault(); resetAll(); break;
+        }
+      });
+
+      // ==================== 启动 ====================
+      goToPage(0);
+      scheduleNext();
+      console.log('Subtitle Video 就绪 · 图文分栏模式 · 空格=暂停 ←→=翻页 R=重置');
+    })();
+  </script>
+</body>
+
+</html>

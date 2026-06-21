@@ -380,6 +380,8 @@
     .card-icon.soon       { background: var(--paper-deep); color: var(--text-muted); }
     .card-icon.svg-canvas { background: linear-gradient(135deg, #e8f0ff, #d0e0f8); color: #3b6fd4; }
     .card-icon.diff       { background: linear-gradient(135deg, #e8f5f0, #c8e8dc); color: #2e7d6e; }
+    .card-icon.splitter   { background: linear-gradient(135deg, #eef0ff, #e0e4ff); color: #6366f1; }
+    .card-icon.video      { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #7c3aed; }
 
     .card p {
       font-size: 13px;
@@ -407,6 +409,8 @@
     .card-tag.soon       { background: var(--paper-deep); color: var(--text-muted); }
     .card-tag.svg-canvas { background: rgba(59, 111, 212, 0.1); color: #3b6fd4; }
     .card-tag.diff       { background: rgba(46, 125, 110, 0.1); color: #2e7d6e; }
+    .card-tag.splitter   { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+    .card-tag.video      { background: rgba(124, 58, 237, 0.1); color: #7c3aed; }
 
     /* 占位卡片特殊样式 */
     .card.placeholder {
@@ -574,6 +578,7 @@
         <button class="tag-btn" data-tag="图像">图像</button>
         <button class="tag-btn" data-tag="设计">设计</button>
         <button class="tag-btn" data-tag="时间">时间</button>
+        <button class="tag-btn" data-tag="视频">视频</button>
       </section>
 
       <!-- 工具卡片网格 -->
@@ -705,6 +710,30 @@
             </div>
           </div>
           <p>左右双栏输入，差异高亮标红/标绿，支持字符级/词语级/行级三种粒度对比，汇总统计</p>
+        </a>
+
+        <!-- 长图切割 -->
+        <a href="img-splitter/" class="card">
+          <div class="card-top">
+            <div class="card-icon splitter">✂</div>
+            <div class="card-head">
+              <h3>长图切割</h3>
+              <span class="card-tag splitter">图像</span>
+            </div>
+          </div>
+          <p>将长图切割为多张短图，拖拽调整切割线避免文字截断，支持 2~20 切片，一键下载全部</p>
+        </a>
+
+        <!-- 字幕视频 -->
+        <a href="subtitle-video/" class="card">
+          <div class="card-top">
+            <div class="card-icon video">▶</div>
+            <div class="card-head">
+              <h3>字幕视频</h3>
+              <span class="card-tag video">视频</span>
+            </div>
+          </div>
+          <p>加载 JSON 数据逐句展示字幕，多种入场动效，配合 OBS 录屏即可生成字幕视频</p>
         </a>
         </div>
 

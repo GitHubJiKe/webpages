@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>长图切割 — WebPages</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       长图切割工具 — Indigo Slate 风格
+       美学方向: 冷静工具感 · 靛蓝点缀 · 专注操作 · 清爽有序
+       ================================================================ */
+
+    :root {
+      --bg:           #f6f7fa;
+      --surface:      #ffffff;
+      --text:         #1e293b;
+      --text-muted:   #64748b;
+      --border:       #e2e6ed;
+      --accent:       #6366f1;
+      --accent-light: #eef0ff;
+      --accent-glow:  rgba(99, 102, 241, 0.15);
+      --warn:         #f43f5e;
+      --warn-light:   #fff1f2;
+      --radius:       14px;
+      --radius-sm:    10px;
+      --shadow-sm:    0 1px 3px rgba(30, 41, 59, 0.05);
+      --shadow-md:    0 4px 16px rgba(30, 41, 59, 0.07);
+      --shadow-lg:    0 8px 32px rgba(30, 41, 59, 0.10);
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; height: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+    }
+
+    /* 背景纹理 */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      opacity: 0.02;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0;
+    }
+
+    /* 装饰柔光 */
+    .deco-blob {
+      position: fixed; top: -100px; right: -100px;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.04) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none; z-index: 0;
+    }
+    .deco-blob.bottom {
+      top: auto; bottom: -120px; left: -80px; right: auto;
+      background: radial-gradient(circle, rgba(244, 63, 94, 0.03) 0%, transparent 70%);
+    }
+
+    /* ====== 导航栏 ====== */
+    .header {
+      flex-shrink: 0; z-index: 100;
+      background: rgba(246, 247, 250, 0.8);
+      backdrop-filter: blur(14px) saturate(140%);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-inner {
+      max-width: 1400px; margin: 0 auto;
+      padding: 14px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .back-link {
+      display: flex; align-items: center; gap: 6px;
+      color: var(--text-muted); text-decoration: none;
+      font-size: 14px; transition: color 0.25s;
+    }
+    .back-link:hover { color: var(--accent); }
+    .back-link svg { width: 18px; height: 18px; }
+    .header-title {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .header-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 15px;
+    }
+    .header-label {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px; font-weight: 600;
+      color: var(--text);
+    }
+    .header-spacer { width: 60px; }
+
+    /* ====== 主布局 ====== */
+    .main {
+      flex: 1; min-height: 0;
+      display: flex; flex-direction: column;
+      max-width: 1400px; width: 100%;
+      margin: 0 auto; padding: 16px 24px 16px;
+      position: relative; z-index: 1;
+      overflow: hidden;
+    }
+
+    /* ====== 上传区（初始态） ====== */
+    .upload-zone {
+      flex: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      transition: all 0.35s cubic-bezier(0.16,1,0.3,1);
+      cursor: pointer;
+      min-height: 300px;
+      gap: 16px;
+      opacity: 0;
+      animation: fadeUp 0.5s 0.1s cubic-bezier(0.16,1,0.3,1) forwards;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      box-shadow: 0 0 0 8px var(--accent-glow);
+    }
+    .upload-zone.drag-over { transform: scale(1.01); }
+    .upload-zone svg { width: 56px; height: 56px; color: var(--text-muted); opacity: 0.5; }
+    .upload-zone h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px; font-weight: 600; color: var(--text);
+    }
+    .upload-zone p { font-size: 13px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+    .upload-zone .hint { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+
+    /* 隐藏上传区 */
+    .upload-zone.hidden { display: none; }
+
+    /* ====== 工作区（上传后） ====== */
+    .workspace {
+      flex: 1; min-height: 0;
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      opacity: 0;
+    }
+    .workspace.active {
+      display: flex;
+      animation: fadeUp 0.4s 0.05s cubic-bezier(0.16,1,0.3,1) forwards;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ====== 操作栏 ====== */
+    .action-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 0;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .action-bar .divider {
+      width: 1px; height: 24px;
+      background: var(--border);
+      margin: 0 4px;
+      flex-shrink: 0;
+    }
+    .action-bar-spacer { flex: 1; min-width: 12px; }
+
+    .slice-label {
+      font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 2px;
+      color: var(--text-muted);
+      margin-right: 2px;
+    }
+    .slice-btn {
+      display: flex; align-items: center; gap: 4px;
+      padding: 8px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+      font-size: 13px; font-weight: 500;
+      color: var(--text-muted);
+      font-family: inherit;
+      white-space: nowrap;
+      box-shadow: var(--shadow-sm);
+    }
+    .slice-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+    .slice-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 2px 12px var(--accent-glow);
+    }
+    .slice-btn.custom {
+      gap: 2px;
+    }
+    .slice-btn.custom input {
+      width: 36px; border: none; background: transparent;
+      font-size: 13px; font-weight: 500; color: inherit;
+      text-align: center; outline: none; font-family: inherit;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+      font-family: inherit;
+      outline: none;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #5558e5);
+      color: #fff;
+      border-color: #6366f1;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #7073f5, #6164f0);
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border-color: transparent;
+      padding: 6px 10px;
+    }
+    .btn-ghost:hover { color: var(--accent); background: var(--accent-light); }
+
+    .info-badge {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 11px; color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+      padding: 6px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      white-space: nowrap;
+    }
+
+    /* ====== 预览 + 切片双栏 ====== */
+    .content-area {
+      flex: 1; min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 16px;
+    }
+
+    /* 预览面板 */
+    .preview-panel {
+      display: flex; flex-direction: column;
+      min-height: 0;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    .preview-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: #fafbfc;
+      flex-shrink: 0;
+    }
+    .preview-label {
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 2.5px;
+      color: var(--text-muted);
+    }
+    .preview-hint {
+      font-size: 10px; color: #94a3b8;
+    }
+    .preview-scroll {
+      flex: 1; min-height: 0;
+      overflow-y: auto;
+      position: relative;
+      background: #f0f1f3;
+    }
+    .preview-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .preview-scroll::-webkit-scrollbar-track { background: transparent; }
+    .preview-scroll::-webkit-scrollbar-thumb {
+      background: #d4d8e0; border-radius: 3px;
+    }
+    .preview-scroll::-webkit-scrollbar-thumb:hover { background: #bcc1cc; }
+
+    .canvas-wrapper {
+      position: relative;
+      margin: 0 auto;
+    }
+    #previewCanvas {
+      display: block;
+      max-width: 100%;
+      cursor: default;
+    }
+
+    /* 切片面板 */
+    .slices-panel {
+      display: flex; flex-direction: column;
+      min-height: 0;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    .slices-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: #fafbfc;
+      flex-shrink: 0;
+    }
+    .slices-label {
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 2.5px;
+      color: var(--text-muted);
+    }
+    .slices-scroll {
+      flex: 1; min-height: 0;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex; flex-direction: column;
+      gap: 10px;
+    }
+    .slices-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .slices-scroll::-webkit-scrollbar-track { background: transparent; }
+    .slices-scroll::-webkit-scrollbar-thumb {
+      background: #d4d8e0; border-radius: 3px;
+    }
+
+    .slice-card {
+      display: flex; flex-direction: column;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      transition: all 0.25s;
+      background: #fafbfc;
+    }
+    .slice-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+    .slice-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 10px;
+      background: #f8f9fb;
+      border-bottom: 1px solid var(--border);
+    }
+    .slice-card-num {
+      font-size: 11px; font-weight: 600;
+      font-family: 'DM Mono', monospace;
+      color: var(--accent);
+    }
+    .slice-card-size {
+      font-size: 10px; color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+    }
+    .slice-card-img {
+      width: 100%;
+      display: block;
+      cursor: pointer;
+    }
+    .slice-card-actions {
+      display: flex; gap: 4px;
+      padding: 6px 10px;
+      border-top: 1px solid var(--border);
+    }
+    .slice-download-btn {
+      flex: 1;
+      padding: 5px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.2s;
+      font-family: inherit;
+      display: flex; align-items: center; justify-content: center;
+      gap: 3px;
+    }
+    .slice-download-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+    .slice-download-btn svg { width: 12px; height: 12px; }
+
+    /* ====== Toast ====== */
+    .toast {
+      position: fixed; top: 80px; left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 10px 24px;
+      border-radius: 24px;
+      font-size: 13px; font-weight: 500;
+      z-index: 200;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      animation: toastIn 0.3s ease, toastOut 0.3s ease 1.8s forwards;
+      pointer-events: none;
+      letter-spacing: 0.3px;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    @keyframes toastOut {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
+
+    /* ====== 响应式 ====== */
+    @media (max-width: 860px) {
+      .content-area {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+      }
+      .slices-panel { max-height: 280px; }
+      .slice-btn { padding: 6px 10px; font-size: 12px; }
+      .action-bar { gap: 4px; }
+      .action-bar .divider { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 装饰元素 -->
+  <div class="deco-blob"></div>
+  <div class="deco-blob bottom"></div>
+
+  <!-- ====== 导航栏 ====== -->
+  <header class="header">
+    <div class="header-inner">
+      <a href="../" class="back-link">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        返回首页
+      </a>
+      <div class="header-title">
+        <div class="header-icon">✂</div>
+        <span class="header-label">长图切割</span>
+      </div>
+      <div class="header-spacer"></div>
+    </div>
+  </header>
+
+  <!-- ====== 主内容 ====== -->
+  <main class="main">
+
+    <!-- 上传区 -->
+    <div class="upload-zone" id="uploadZone">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+      <h3>拖入长图或点击上传</h3>
+      <p>支持 JPG / PNG / WebP，将长图智能切割为多个短图<br>可手动调整切割线，避免文字被截断</p>
+      <p class="hint">也可以 Ctrl+V 粘贴剪贴板中的图片</p>
+      <input type="file" id="fileInput" accept="image/*" style="display:none">
+    </div>
+
+    <!-- 工作区 -->
+    <div class="workspace" id="workspace">
+      <!-- 操作栏 -->
+      <div class="action-bar" id="actionBar">
+        <span class="slice-label">切片数</span>
+        <button class="slice-btn" data-count="2">2</button>
+        <button class="slice-btn active" data-count="3">3</button>
+        <button class="slice-btn" data-count="4">4</button>
+        <button class="slice-btn" data-count="6">6</button>
+        <button class="slice-btn" data-count="9">9</button>
+        <button class="slice-btn custom" id="btnCustom">
+          <input type="number" id="customCount" value="5" min="2" max="20" title="自定义">
+        </button>
+
+        <span class="divider"></span>
+        <button class="btn btn-ghost" id="btnReset" title="重置切割线为等分">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          重置等分
+        </button>
+
+        <span class="divider"></span>
+        <div class="action-bar-spacer"></div>
+
+        <div class="info-badge" id="imgInfo">--</div>
+
+        <button class="btn btn-secondary" id="btnNewImage">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          换图
+        </button>
+        <button class="btn btn-primary" id="btnDownloadAll">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          下载全部
+        </button>
+      </div>
+
+      <!-- 预览 + 切片双栏 -->
+      <div class="content-area">
+        <!-- 预览面板 -->
+        <div class="preview-panel">
+          <div class="preview-header">
+            <span class="preview-label">✂ 长图预览 · 拖拽切割线调整</span>
+            <span class="preview-hint" id="previewTooltip">切割线可拖拽</span>
+          </div>
+          <div class="preview-scroll" id="previewScroll">
+            <div class="canvas-wrapper">
+              <canvas id="previewCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 切片面板 -->
+        <div class="slices-panel">
+          <div class="slices-header">
+            <span class="slices-label">▦ 切片预览</span>
+            <span style="font-size:11px;color:var(--text-muted)" id="sliceCountLabel">共 3 张</span>
+          </div>
+          <div class="slices-scroll" id="slicesScroll">
+            <div style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:13px" id="slicesEmpty">
+              请在左侧调整切割线
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+  (function() {
+    'use strict';
+
+    /* ---- Canvas roundRect polyfill ---- */
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
+        this.beginPath();
+        this.moveTo(x + r.tl, y);
+        this.lineTo(x + w - r.tr, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+        this.lineTo(x + w, y + h - r.br);
+        this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+        this.lineTo(x + r.bl, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+        this.lineTo(x, y + r.tl);
+        this.quadraticCurveTo(x, y, x + r.tl, y);
+        this.closePath();
+      };
+    }
+
+    /* ==============================================================
+       DOM 引用
+       ============================================================== */
+    var uploadZone   = document.getElementById('uploadZone');
+    var fileInput    = document.getElementById('fileInput');
+    var workspace    = document.getElementById('workspace');
+    var previewCanvas = document.getElementById('previewCanvas');
+    var previewScroll = document.getElementById('previewScroll');
+    var previewTooltip = document.getElementById('previewTooltip');
+    var slicesScroll = document.getElementById('slicesScroll');
+    var slicesEmpty  = document.getElementById('slicesEmpty');
+    var sliceCountLabel = document.getElementById('sliceCountLabel');
+    var imgInfo      = document.getElementById('imgInfo');
+    var actionBar    = document.getElementById('actionBar');
+    var customCount  = document.getElementById('customCount');
+    var btnCustom    = document.getElementById('btnCustom');
+    var btnReset     = document.getElementById('btnReset');
+    var btnNewImage  = document.getElementById('btnNewImage');
+    var btnDownloadAll = document.getElementById('btnDownloadAll');
+    var ctx = previewCanvas.getContext('2d');
+
+    /* ==============================================================
+       状态
+       ============================================================== */
+    var image = null;           // HTMLImageElement
+    var cutLines = [];          // 切割线百分比位置 [0.33, 0.66] for 3 slices
+    var sliceCount = 3;
+    var displayScale = 1;       // 预览缩放比例
+    var previewWidth = 0;
+    var previewHeight = 0;
+    var draggingIndex = -1;     // 正在拖拽的切割线索引
+    var hoveredIndex = -1;      // 鼠标悬停的切割线索引
+
+    /* ==============================================================
+       上传相关
+       ============================================================== */
+    uploadZone.addEventListener('click', function(e) {
+      if (e.target === customCount || e.target.closest('#btnCustom')) return;
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function(e) {
+      if (e.target.files && e.target.files[0]) {
+        loadImageFile(e.target.files[0]);
+      }
+    });
+
+    // 拖拽上传
+    uploadZone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      uploadZone.classList.add('drag-over');
+    });
+    uploadZone.addEventListener('dragleave', function() {
+      uploadZone.classList.remove('drag-over');
+    });
+    uploadZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        loadImageFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    // 剪贴板粘贴
+    document.addEventListener('paste', function(e) {
+      if (!uploadZone.classList.contains('hidden')) {
+        var items = e.clipboardData && e.clipboardData.items;
+        if (items) {
+          for (var i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+              e.preventDefault();
+              loadImageFile(items[i].getAsFile());
+              return;
+            }
+          }
+        }
+      }
+    });
+
+    /* ==============================================================
+       加载图片
+       ============================================================== */
+    function loadImageFile(file) {
+      if (!file.type.match(/image\/(jpeg|png|webp)/)) {
+        showToast('请上传 JPG / PNG / WebP 格式图片', true);
+        return;
+      }
+
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+          image = img;
+          sliceCount = 3;
+          resetCutLines();
+          enterWorkspace();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /* ==============================================================
+       进入工作区
+       ============================================================== */
+    function enterWorkspace() {
+      uploadZone.classList.add('hidden');
+      workspace.classList.add('active');
+
+      // 更新切片数按钮
+      updateSliceButtons();
+      updateCustomInput();
+
+      renderAll();
+
+      imgInfo.textContent = image.width + '×' + image.height + ' px';
+    }
+
+    /* ==============================================================
+       切割线管理
+       ============================================================== */
+    function resetCutLines() {
+      cutLines = [];
+      for (var i = 1; i < sliceCount; i++) {
+        cutLines.push(i / sliceCount);
+      }
+    }
+
+    function setSliceCount(n) {
+      n = Math.max(2, Math.min(20, n));
+      sliceCount = n;
+      // 保留现有切割线比例，如果数量不匹配则重置
+      if (cutLines.length !== n - 1) {
+        resetCutLines();
+      } else {
+        // 确保切割线按比例缩放仍然有效
+        validateCutLines();
+      }
+      updateSliceButtons();
+      updateCustomInput();
+      renderAll();
+    }
+
+    function validateCutLines() {
+      // 确保切割线在 (0, 1) 范围内且有序
+      cutLines.sort(function(a, b) { return a - b; });
+      // 确保每条线之间有最小间距 (2%)
+      var minGap = 0.02;
+      for (var i = 0; i < cutLines.length; i++) {
+        var low = i === 0 ? 0.01 : cutLines[i-1] + minGap;
+        var high = i === cutLines.length - 1 ? 0.99 : cutLines[i+1] - minGap;
+        if (cutLines[i] < low) cutLines[i] = low;
+        if (cutLines[i] > high) cutLines[i] = high;
+      }
+    }
+
+    function updateSliceButtons() {
+      var btns = actionBar.querySelectorAll('.slice-btn[data-count]');
+      for (var i = 0; i < btns.length; i++) {
+        var cnt = parseInt(btns[i].dataset.count);
+        if (cnt === sliceCount) {
+          btns[i].classList.add('active');
+        } else {
+          btns[i].classList.remove('active');
+        }
+      }
+      // 自定义按钮
+      if (sliceCount === parseInt(customCount.value)) {
+        btnCustom.classList.add('active');
+      } else {
+        btnCustom.classList.remove('active');
+      }
+      sliceCountLabel.textContent = '共 ' + sliceCount + ' 张';
+    }
+
+    function updateCustomInput() {
+      customCount.value = sliceCount;
+    }
+
+    /* ==============================================================
+       渲染（重绘整个预览 + 切片缩略图）
+       ============================================================== */
+    function renderAll() {
+      renderPreview();
+      renderSliceThumbnails();
+    }
+
+    /* ==============================================================
+       渲染预览（Canvas）
+       ============================================================== */
+    function renderPreview() {
+      if (!image) return;
+
+      // 计算预览尺寸
+      var containerWidth = previewScroll.clientWidth - 4;
+      if (containerWidth < 200) containerWidth = 600;
+      previewWidth = Math.min(containerWidth, 700);
+      displayScale = previewWidth / image.width;
+      previewHeight = image.height * displayScale;
+
+      previewCanvas.width = previewWidth;
+      previewCanvas.height = previewHeight;
+      previewCanvas.style.width = previewWidth + 'px';
+      previewCanvas.style.height = previewHeight + 'px';
+
+      // 绘制图片
+      ctx.clearRect(0, 0, previewWidth, previewHeight);
+      ctx.drawImage(image, 0, 0, previewWidth, previewHeight);
+
+      // 交替背景着色（区分切片区域）
+      for (var i = 0; i < sliceCount; i++) {
+        var top = i === 0 ? 0 : cutLines[i-1] * image.height * displayScale;
+        var bottom = i === sliceCount - 1 ? previewHeight : cutLines[i] * image.height * displayScale;
+        if (i % 2 === 0) {
+          ctx.fillStyle = 'rgba(99, 102, 241, 0.04)';
+          ctx.fillRect(0, top, previewWidth, bottom - top);
+        }
+      }
+
+      // 绘制切割线
+      for (var i = 0; i < cutLines.length; i++) {
+        var y = cutLines[i] * previewHeight;
+        var isHovered = (i === hoveredIndex);
+        var isDragging = (i === draggingIndex);
+
+        // 线
+        ctx.strokeStyle = isDragging ? '#f43f5e' : (isHovered ? '#6366f1' : '#e04090');
+        ctx.lineWidth = isDragging ? 3 : (isHovered ? 2.5 : 2);
+        ctx.setLineDash(isDragging ? [] : [8, 4]);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(previewWidth, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.lineWidth = 1;
+
+        // 左右端点圆
+        var handleR = isDragging ? 7 : 5;
+        [{x: handleR + 2}, {x: previewWidth - handleR - 2}].forEach(function(pos) {
+          ctx.beginPath();
+          ctx.arc(pos.x, y, handleR, 0, Math.PI * 2);
+          ctx.fillStyle = isDragging ? '#f43f5e' : (isHovered ? '#6366f1' : '#e04090');
+          ctx.fill();
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.lineWidth = 1;
+        });
+
+        // 中间标签
+        var label = '✂ ' + (i + 1) + '/' + cutLines.length;
+        var labelW = ctx.measureText(label).width + 16;
+        var labelX = previewWidth / 2 - labelW / 2;
+        var labelY = y - 14;
+
+        ctx.fillStyle = isDragging ? '#f43f5e' : (isHovered ? '#6366f1' : 'rgba(224, 64, 144, 0.85)');
+        ctx.beginPath();
+        ctx.roundRect(labelX, labelY - 8, labelW, 22, 6);
+        ctx.fill();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = '11px -apple-system, "PingFang SC", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(label, labelX + 8, labelY + 7);
+
+        // 百分比
+        var pctText = Math.round(cutLines[i] * 100) + '%';
+        var pctW = ctx.measureText(pctText).width;
+        ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+        ctx.font = '10px "DM Mono", monospace';
+        ctx.fillText(pctText, previewWidth - pctW - 10, y - 8);
+      }
+
+      // 切片编号
+      for (var j = 0; j < sliceCount; j++) {
+        var sTop = j === 0 ? 0 : cutLines[j-1] * previewHeight;
+        var sBottom = j === sliceCount - 1 ? previewHeight : cutLines[j] * previewHeight;
+        var sMid = (sTop + sBottom) / 2;
+
+        ctx.fillStyle = 'rgba(30, 41, 59, 0.12)';
+        ctx.font = '40px "DM Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('#' + (j + 1), previewWidth / 2, sMid + 14);
+      }
+    }
+
+    /* ==============================================================
+       生成切片缩略图
+       ============================================================== */
+    function renderSliceThumbnails() {
+      if (!image) return;
+
+      slicesEmpty.style.display = 'none';
+      var existingCards = slicesScroll.querySelectorAll('.slice-card');
+      for (var i = 0; i < existingCards.length; i++) {
+        existingCards[i].remove();
+      }
+
+      for (var s = 0; s < sliceCount; s++) {
+        var topFrac = s === 0 ? 0 : cutLines[s-1];
+        var bottomFrac = s === sliceCount - 1 ? 1 : cutLines[s];
+        var sliceH = Math.round(image.height * (bottomFrac - topFrac));
+
+        // 生成缩略图
+        var thumbCanvas = document.createElement('canvas');
+        var thumbW = 300;
+        var thumbScale = thumbW / image.width;
+        var thumbH = Math.round(sliceH * thumbScale);
+        thumbCanvas.width = thumbW;
+        thumbCanvas.height = thumbH;
+        var tCtx = thumbCanvas.getContext('2d');
+        tCtx.drawImage(image,
+          0, Math.round(image.height * topFrac), image.width, sliceH,
+          0, 0, thumbW, thumbH
+        );
+
+        var dataUrl = thumbCanvas.toDataURL('image/png');
+
+        // 创建卡片
+        var card = document.createElement('div');
+        card.className = 'slice-card';
+
+        card.innerHTML =
+          '<div class="slice-card-header">' +
+            '<span class="slice-card-num">#' + (s + 1) + ' / ' + sliceCount + '</span>' +
+            '<span class="slice-card-size">' + image.width + '×' + sliceH + ' px</span>' +
+          '</div>' +
+          '<img class="slice-card-img" src="' + dataUrl + '" alt="切片 #' + (s + 1) + '" title="点击下载切片 #' + (s + 1) + '">' +
+          '<div class="slice-card-actions">' +
+            '<button class="slice-download-btn" data-slice="' + s + '">' +
+              '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>' +
+              '下载' +
+            '</button>' +
+          '</div>';
+
+        // 点击缩略图下载
+        card.querySelector('.slice-card-img').addEventListener('click', function(idx) {
+          return function() { downloadSlice(idx); };
+        }(s));
+
+        // 下载按钮
+        card.querySelector('.slice-download-btn').addEventListener('click', function(idx) {
+          return function(e) { e.stopPropagation(); downloadSlice(idx); };
+        }(s));
+
+        slicesScroll.appendChild(card);
+      }
+    }
+
+    /* ==============================================================
+       下载切片
+       ============================================================== */
+    function downloadSlice(index) {
+      if (!image) return;
+
+      var topFrac = index === 0 ? 0 : cutLines[index-1];
+      var bottomFrac = index === sliceCount - 1 ? 1 : cutLines[index];
+      var sliceH = Math.round(image.height * (bottomFrac - topFrac));
+
+      var downloadCanvas = document.createElement('canvas');
+      downloadCanvas.width = image.width;
+      downloadCanvas.height = sliceH;
+      var dCtx = downloadCanvas.getContext('2d');
+      dCtx.drawImage(image,
+        0, Math.round(image.height * topFrac), image.width, sliceH,
+        0, 0, image.width, sliceH
+      );
+
+      downloadCanvas.toBlob(function(blob) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = '切片_' + (index + 1) + '_' + image.width + 'x' + sliceH + '.png';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('✓ 切片 #' + (index + 1) + ' 已下载');
+      }, 'image/png');
+    }
+
+    /* ==============================================================
+       下载全部
+       ============================================================== */
+    function downloadAllSlices() {
+      if (!image) return;
+
+      showToast('正在生成 ' + sliceCount + ' 张切片...');
+
+      function downloadNext(index) {
+        if (index >= sliceCount) return;
+
+        var topFrac = index === 0 ? 0 : cutLines[index-1];
+        var bottomFrac = index === sliceCount - 1 ? 1 : cutLines[index];
+        var sliceH = Math.round(image.height * (bottomFrac - topFrac));
+
+        var c = document.createElement('canvas');
+        c.width = image.width;
+        c.height = sliceH;
+        var cx = c.getContext('2d');
+        cx.drawImage(image,
+          0, Math.round(image.height * topFrac), image.width, sliceH,
+          0, 0, image.width, sliceH
+        );
+
+        c.toBlob(function(blob) {
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = '切片_' + (index + 1) + '_of_' + sliceCount + '.png';
+          a.click();
+          URL.revokeObjectURL(url);
+
+          // 延迟下载下一张（避免浏览器阻止连续下载）
+          setTimeout(function() {
+            downloadNext(index + 1);
+          }, 300);
+        }, 'image/png');
+      }
+
+      downloadNext(0);
+      setTimeout(function() {
+        showToast('✓ 全部 ' + sliceCount + ' 张切片已开始下载');
+      }, 300);
+    }
+
+    /* ==============================================================
+       Canvas 交互 — 拖拽切割线
+       ============================================================== */
+    function getCanvasPos(e) {
+      var rect = previewCanvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+
+    function findNearLine(y) {
+      var threshold = 14; // 像素距离阈值
+      for (var i = 0; i < cutLines.length; i++) {
+        var lineY = cutLines[i] * previewHeight;
+        if (Math.abs(y - lineY) < threshold) {
+          return i;
+        }
+      }
+      return -1;
+    }
+
+    previewCanvas.addEventListener('mousedown', function(e) {
+      var pos = getCanvasPos(e);
+      var idx = findNearLine(pos.y);
+      if (idx >= 0) {
+        draggingIndex = idx;
+        previewCanvas.style.cursor = 'row-resize';
+        previewTooltip.textContent = '正在调整切割线 #' + (idx + 1) + ' ...';
+        previewTooltip.style.color = '#f43f5e';
+        renderPreview();
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener('mousemove', function(e) {
+      if (draggingIndex >= 0) {
+        var pos = getCanvasPos(e);
+        var newFrac = pos.y / previewHeight;
+        newFrac = Math.max(0.02, Math.min(0.98, newFrac));
+        cutLines[draggingIndex] = newFrac;
+        validateCutLines();
+        renderAll();
+      } else if (previewCanvas) {
+        var pos = getCanvasPos(e);
+        var idx = findNearLine(pos.y);
+        if (idx !== hoveredIndex) {
+          hoveredIndex = idx;
+          previewCanvas.style.cursor = idx >= 0 ? 'row-resize' : 'default';
+          previewTooltip.textContent = idx >= 0 ? '拖拽调整切割线 #' + (idx + 1) : '切割线可拖拽';
+          previewTooltip.style.color = idx >= 0 ? '#6366f1' : '';
+          renderPreview();
+        }
+      }
+    });
+
+    window.addEventListener('mouseup', function() {
+      if (draggingIndex >= 0) {
+        draggingIndex = -1;
+        previewCanvas.style.cursor = hoveredIndex >= 0 ? 'row-resize' : 'default';
+        previewTooltip.textContent = '切割线可拖拽';
+        previewTooltip.style.color = '';
+        renderAll();
+      }
+    });
+
+    // 触摸事件
+    previewCanvas.addEventListener('touchstart', function(e) {
+      if (e.touches.length === 1) {
+        var pos = getCanvasPos(e.touches[0]);
+        var idx = findNearLine(pos.y);
+        if (idx >= 0) {
+          draggingIndex = idx;
+          previewTooltip.textContent = '正在调整切割线 #' + (idx + 1) + ' ...';
+          previewTooltip.style.color = '#f43f5e';
+          renderPreview();
+          e.preventDefault();
+        }
+      }
+    }, { passive: false });
+
+    previewCanvas.addEventListener('touchmove', function(e) {
+      if (draggingIndex >= 0 && e.touches.length === 1) {
+        var pos = getCanvasPos(e.touches[0]);
+        var newFrac = pos.y / previewHeight;
+        newFrac = Math.max(0.02, Math.min(0.98, newFrac));
+        cutLines[draggingIndex] = newFrac;
+        validateCutLines();
+        renderAll();
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    previewCanvas.addEventListener('touchend', function() {
+      if (draggingIndex >= 0) {
+        draggingIndex = -1;
+        previewTooltip.textContent = '切割线可拖拽';
+        previewTooltip.style.color = '';
+        renderAll();
+      }
+    });
+
+    // 键盘微调
+    document.addEventListener('keydown', function(e) {
+      if (hoveredIndex < 0 || hoveredIndex >= cutLines.length) return;
+
+      var step = 0.005; // 0.5%
+      if (e.shiftKey) step = 0.02; // Shift 加速
+
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (e.key === 'ArrowUp') {
+          cutLines[hoveredIndex] = Math.max(0.01, cutLines[hoveredIndex] - step);
+        } else {
+          cutLines[hoveredIndex] = Math.min(0.99, cutLines[hoveredIndex] + step);
+        }
+        validateCutLines();
+        renderAll();
+      }
+    });
+
+    /* ==============================================================
+       操作栏事件
+       ============================================================== */
+    actionBar.addEventListener('click', function(e) {
+      var btn = e.target.closest('.slice-btn[data-count]');
+      if (btn) {
+        var cnt = parseInt(btn.dataset.count);
+        setSliceCount(cnt);
+        return;
+      }
+    });
+
+    customCount.addEventListener('change', function() {
+      var n = parseInt(customCount.value);
+      if (n && n >= 2 && n <= 20) {
+        setSliceCount(n);
+      } else {
+        updateCustomInput();
+      }
+    });
+
+    btnCustom.addEventListener('click', function(e) {
+      if (e.target === customCount) return;
+      customCount.focus();
+      customCount.select();
+    });
+
+    btnReset.addEventListener('click', function() {
+      resetCutLines();
+      renderAll();
+      showToast('✓ 切割线已重置为等分');
+    });
+
+    btnNewImage.addEventListener('click', function() {
+      fileInput.click();
+    });
+
+    btnDownloadAll.addEventListener('click', function() {
+      downloadAllSlices();
+    });
+
+    /* ==============================================================
+       Toast
+       ============================================================== */
+    function showToast(msg, isError) {
+      var existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+
+      var toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = msg;
+      if (isError) {
+        toast.style.background = '#3d2025';
+        toast.style.color = '#f5c6cb';
+        toast.style.borderColor = 'rgba(244, 63, 94, 0.4)';
+      }
+      document.body.appendChild(toast);
+      setTimeout(function() {
+        if (toast.parentNode) toast.remove();
+      }, 2200);
+    }
+
+    /* ==============================================================
+       窗口大小变化
+       ============================================================== */
+    var resizeTimer = null;
+    window.addEventListener('resize', function() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function() {
+        if (image) renderAll();
+      }, 250);
+    });
+
+  })();
+  </script>
+</body>
+</html>
