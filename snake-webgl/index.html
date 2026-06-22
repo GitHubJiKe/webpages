@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebGL 贪吃蛇</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 100vw; height: 100vh; overflow: hidden;
+    background: #090918;
+    font-family: "Courier New", "SF Mono", "Fira Code", monospace;
+    user-select: none; -webkit-user-select: none;
+    cursor: none;
+  }
+
+  canvas { display: block; }
+
+  /* HUD 叠加层 */
+  #hud {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between;
+    align-items: flex-start;
+    padding: 28px 36px;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .hud-item { display: flex; flex-direction: column; gap: 2px; }
+  .hud-label {
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: rgba(0,255,255,0.5);
+  }
+  .hud-value {
+    font-size: 36px; font-weight: bold;
+    color: #00ffff;
+    text-shadow: 0 0 20px rgba(0,255,255,0.6), 0 0 40px rgba(0,255,255,0.3);
+  }
+
+  #hud-best .hud-label { color: rgba(255,0,255,0.5); }
+  #hud-best .hud-value { color: #ff00ff; text-shadow: 0 0 20px rgba(255,0,255,0.6); }
+
+  /* 方向指示器 */
+  #dir-indicator {
+    position: fixed; bottom: 50%; right: 40px;
+    transform: translateY(50%);
+    display: grid; grid-template-columns: 48px 48px 48px;
+    grid-template-rows: 48px 48px 48px;
+    gap: 6px;
+    pointer-events: none; z-index: 10;
+  }
+  .dir-key {
+    width: 48px; height: 48px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(0,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: rgba(0,255,255,0.3);
+    transition: all 0.15s ease;
+  }
+  .dir-key.active {
+    border-color: #00ffff;
+    color: #00ffff;
+    background: rgba(0,255,255,0.08);
+    box-shadow: 0 0 16px rgba(0,255,255,0.25);
+  }
+  .dir-up    { grid-column: 2; grid-row: 1; }
+  .dir-left  { grid-column: 1; grid-row: 2; }
+  .dir-center{ grid-column: 2; grid-row: 2; }
+  .dir-right { grid-column: 3; grid-row: 2; }
+  .dir-down  { grid-column: 2; grid-row: 3; }
+  .dir-bullet{ grid-column: 2; grid-row: 4; }
+
+  /* 开始/结束覆盖 */
+  #overlay {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 20px;
+    z-index: 20;
+    pointer-events: none;
+  }
+  #overlay.hidden { opacity: 0; }
+  #overlay .title {
+    font-size: 52px; font-weight: bold; letter-spacing: 6px;
+    color: #00ffff;
+    text-shadow: 0 0 30px rgba(0,255,255,0.7), 0 0 60px rgba(0,255,255,0.4), 0 0 100px rgba(0,255,255,0.2);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  #overlay .subtitle {
+    font-size: 14px; letter-spacing: 4px;
+    color: rgba(0,255,255,0.5);
+  }
+  #overlay .final-score {
+    font-size: 28px; color: #ff00ff;
+    text-shadow: 0 0 16px rgba(255,0,255,0.5);
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.8; }
+    50%      { opacity: 1; }
+  }
+
+  /* 移动端触摸区 */
+  #touch-hint {
+    position: fixed; bottom: 32px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px; letter-spacing: 2px;
+    color: rgba(255,255,255,0.25);
+    pointer-events: none; z-index: 10;
+  }
+
+  @media (max-width: 768px) {
+    #dir-indicator { right: 10px; gap: 4px; }
+    .dir-key { width: 36px; height: 36px; font-size: 14px; }
+    #overlay .title { font-size: 32px; }
+    .hud-value { font-size: 24px; }
+  }
+
+  /* 子弹指示器 */
+  #bullet-indicator {
+    border-color: rgba(255,136,68,0.5) !important;
+    color: #ff8844 !important;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div class="hud-item">
+    <span class="hud-label">Score</span>
+    <span class="hud-value" id="score">0</span>
+  </div>
+  <div class="hud-item" id="hud-best">
+    <span class="hud-label">Best</span>
+    <span class="hud-value" id="best">0</span>
+  </div>
+</div>
+
+<div id="dir-indicator">
+  <div class="dir-key dir-up">▲</div>
+  <div class="dir-key dir-left">◀</div>
+  <div class="dir-key dir-center" id="jump-indicator">G</div>
+  <div class="dir-key dir-right">▶</div>
+  <div class="dir-key dir-down">▼</div>
+  <div class="dir-key dir-bullet" id="bullet-indicator">B</div>
+</div>
+
+<div id="overlay">
+  <div class="title">SNAKE</div>
+  <div class="subtitle" id="overlay-msg">按 空格键 或 方向键 开始</div>
+  <div class="final-score" id="final-score"></div>
+</div>
+
+<div id="touch-hint">← ↑ ↓ → 方向 · G 跳跃 · B 射击 · 空格 暂停</div>
+
+<div id="jump-indicator">G</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ==================== 常量 ====================
+const GRID    = 20;          // 20×20 网格
+const CELL    = 1.2;         // 每格世界单位
+const TICK_MS_MIN = 100;
+const TICK_MS_MAX = 280;
+
+function getTickMs() {
+  return Math.max(TICK_MS_MIN, TICK_MS_MAX - Math.floor(scoreVal / 10) * 8);
+}
+const BOARD_W = GRID * CELL;
+const BOARD_H = GRID * CELL;
+
+// ==================== DOM ====================
+const $canvas      = document.getElementById('c');
+const $score       = document.getElementById('score');
+const $best        = document.getElementById('best');
+const $overlay     = document.getElementById('overlay');
+const $overlayMsg  = document.getElementById('overlay-msg');
+const $finalScore  = document.getElementById('final-score');
+const $dirKeys     = {
+  up:    document.querySelector('.dir-up'),
+  down:  document.querySelector('.dir-down'),
+  left:  document.querySelector('.dir-left'),
+  right: document.querySelector('.dir-right'),
+};
+
+// ==================== Three.js 初始化 ====================
+const renderer = new THREE.WebGLRenderer({ canvas: $canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.4;
+
+const scene  = new THREE.Scene();
+scene.background = new THREE.Color('#090918');
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 80);
+camera.position.set(0, 20, 22);
+camera.lookAt(0, 0, 0);
+
+// ==================== 灯光 ====================
+const ambient = new THREE.AmbientLight('#334466', 5);
+scene.add(ambient);
+const dirLight = new THREE.DirectionalLight('#ffffff', 1.2);
+dirLight.position.set(5, 15, 5);
+scene.add(dirLight);
+const pointLight = new THREE.PointLight('#00ffff', 40, 22);
+pointLight.position.set(0, 6, 0);
+scene.add(pointLight);
+// 第二盏灯照亮边缘
+const edgeLight = new THREE.PointLight('#0088ff', 20, 25);
+edgeLight.position.set(0, 2, -12);
+scene.add(edgeLight);
+
+// ==================== 地板网格 ====================
+const gridGroup = new THREE.Group();
+scene.add(gridGroup);
+
+// 底座平面
+const baseGeo = new THREE.PlaneGeometry(BOARD_W + 1, BOARD_H + 1);
+const baseMat = new THREE.MeshStandardMaterial({
+  color: '#1a1a40',
+  roughness: 0.5,
+  metalness: 0.3,
+  emissive: '#0a0a30',
+  emissiveIntensity: 0.5,
+});
+const basePlane = new THREE.Mesh(baseGeo, baseMat);
+basePlane.rotation.x = -Math.PI / 2;
+basePlane.position.y = -0.05;
+gridGroup.add(basePlane);
+
+// 网格线
+const gridLinesMat = new THREE.LineBasicMaterial({ color: '#2a3a5a', transparent: true, opacity: 0.7 });
+for (let i = -GRID/2; i <= GRID/2; i++) {
+  const x = i * CELL;
+  // 横线
+  const hGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-BOARD_W/2, 0.01, x),
+    new THREE.Vector3( BOARD_W/2, 0.01, x),
+  ]);
+  gridGroup.add(new THREE.Line(hGeo, gridLinesMat));
+  // 竖线
+  const vGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(x, 0.01, -BOARD_H/2),
+    new THREE.Vector3(x, 0.01,  BOARD_H/2),
+  ]);
+  gridGroup.add(new THREE.Line(vGeo, gridLinesMat));
+}
+
+// 边框发光环
+const borderGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(BOARD_W, BOARD_H));
+const borderLine = new THREE.LineSegments(borderGeo,
+  new THREE.LineBasicMaterial({ color: '#00ffff', transparent: true, opacity: 0.7 }));
+borderLine.rotation.x = -Math.PI / 2;
+borderLine.position.y = 0.02;
+gridGroup.add(borderLine);
+
+// ==================== 蛇体 ====================
+const snakeMeshes = [];
+const HEAD_COLOR = '#ffffff';
+const BODY_COLOR = '#00e5ff';
+const TAIL_COLOR = '#008899';
+
+const snakeMaterialCache = {};
+function getSnakeMaterial(index, total) {
+  if (index === 0) {
+    if (!snakeMaterialCache.head) {
+      snakeMaterialCache.head = new THREE.MeshStandardMaterial({
+        color: HEAD_COLOR, roughness: 0.15, metalness: 0.05,
+        emissive: '#00ffff', emissiveIntensity: 2.5
+      });
+    }
+    return snakeMaterialCache.head;
+  }
+  const ratio = index / Math.max(total - 1, 1);
+  const key = `body_${Math.round(ratio * 10)}`;
+  if (!snakeMaterialCache[key]) {
+    const r = 0, g = THREE.MathUtils.lerp(0.9, 0.3, ratio), b = THREE.MathUtils.lerp(1, 0.4, ratio);
+    snakeMaterialCache[key] = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(r, g, b), roughness: 0.2, metalness: 0.1,
+      emissive: new THREE.Color(r, g * 0.5, b * 0.5), emissiveIntensity: 1.2
+    });
+  }
+  return snakeMaterialCache[key];
+}
+
+function createSegment(x, z, index, total) {
+  const geo = new THREE.BoxGeometry(CELL * 0.85, CELL * 0.5, CELL * 0.85);
+  const mat = getSnakeMaterial(index, total);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(
+    (x - GRID/2 + 0.5) * CELL,
+    CELL * 0.25,
+    (z - GRID/2 + 0.5) * CELL
+  );
+  mesh.castShadow = true;
+  scene.add(mesh);
+  return mesh;
+}
+
+// ==================== 食物 ====================
+const foodGroup = new THREE.Group();
+scene.add(foodGroup);
+
+const foodGeo = new THREE.OctahedronGeometry(CELL * 0.35, 1);
+const foodMat = new THREE.MeshStandardMaterial({
+  color: '#ff88ff', roughness: 0.05, metalness: 0.05,
+  emissive: '#ff44ff', emissiveIntensity: 4
+});
+const foodMesh = new THREE.Mesh(foodGeo, foodMat);
+foodMesh.position.y = CELL * 0.45;
+foodGroup.add(foodMesh);
+
+// 食物光环
+const ringGeo = new THREE.TorusGeometry(CELL * 0.4, 0.06, 16, 32);
+const ringMat = new THREE.MeshStandardMaterial({
+  color: '#ff00ff', roughness: 0.05, emissive: '#ff44ff', emissiveIntensity: 3
+});
+const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+ringMesh.rotation.x = -Math.PI / 2;
+ringMesh.position.y = CELL * 0.45;
+foodGroup.add(ringMesh);
+
+// 食物粒子光环
+const particlesGeo = new THREE.BufferGeometry();
+const particlesCount = 60;
+const particlesPositions = new Float32Array(particlesCount * 3);
+for (let i = 0; i < particlesCount; i++) {
+  const angle = (i / particlesCount) * Math.PI * 2;
+  const radius = CELL * 0.55;
+  particlesPositions[i * 3]     = Math.cos(angle) * radius;
+  particlesPositions[i * 3 + 1] = CELL * 0.45;
+  particlesPositions[i * 3 + 2] = Math.sin(angle) * radius;
+}
+particlesGeo.setAttribute('position', new THREE.BufferAttribute(particlesPositions, 3));
+const particlesMat = new THREE.PointsMaterial({
+  color: '#ffbbff', size: 0.12, blending: THREE.AdditiveBlending, depthWrite: false
+});
+const particlesRing = new THREE.Points(particlesGeo, particlesMat);
+foodGroup.add(particlesRing);
+
+// ==================== 粒子爆炸系统 ====================
+const explosionParticles = [];
+function spawnExplosion(x, z) {
+  const count = 25;
+  for (let i = 0; i < count; i++) {
+    const geo = new THREE.SphereGeometry(0.06, 4, 4);
+    const mat = new THREE.MeshBasicMaterial({ color: '#ff00ff' });
+    const p = new THREE.Mesh(geo, mat);
+    p.position.set(x, CELL * 0.3, z);
+    p.userData = {
+      vx: (Math.random() - 0.5) * 4,
+      vy: Math.random() * 5 + 2,
+      vz: (Math.random() - 0.5) * 4,
+      life: 0.5 + Math.random() * 0.4,
+    };
+    scene.add(p);
+    explosionParticles.push(p);
+  }
+}
+
+// ==================== 障碍物 ====================
+const obstacles      = [];
+const obstacleMeshes = [];
+const obstacleGroup  = new THREE.Group();
+scene.add(obstacleGroup);
+
+const obsGeo = new THREE.ConeGeometry(CELL * 0.35, CELL * 0.7, 4, 2);
+const obsMat = new THREE.MeshStandardMaterial({
+  color: '#ff2222', roughness: 0.3, metalness: 0.5,
+  emissive: '#440000', emissiveIntensity: 0.6,
+});
+
+function spawnObstacle() {
+  const occupied = new Set([
+    ...snake.map(s => `${s.x},${s.y}`),
+    `${food.x},${food.y}`,
+    ...obstacles.map(o => `${o.x},${o.y}`)
+  ]);
+  const free = [];
+  for (let x = 0; x < GRID; x++)
+    for (let y = 0; y < GRID; y++)
+      if (!occupied.has(`${x},${y}`)) free.push({ x, y });
+  if (free.length === 0) return;
+  const pos = free[Math.floor(Math.random() * free.length)];
+  obstacles.push(pos);
+
+  const mesh = new THREE.Mesh(obsGeo, obsMat.clone());
+  mesh.position.set(
+    (pos.x - GRID/2 + 0.5) * CELL,
+    CELL * 0.35,
+    (pos.y - GRID/2 + 0.5) * CELL
+  );
+  mesh.rotation.y = Math.random() * Math.PI;
+  obstacleGroup.add(mesh);
+  obstacleMeshes.push(mesh);
+}
+
+function clearObstacles() {
+  obstacleMeshes.forEach(m => { obstacleGroup.remove(m); m.material.dispose(); });
+  obstacleMeshes.length = 0;
+  obstacles.length = 0;
+}
+
+function spawnObstaclesForScore() {
+  const count = Math.min(Math.floor(scoreVal / 30) + 1, 15);
+  while (obstacles.length < count) spawnObstacle();
+}
+
+// ==================== 游戏状态 ====================
+let snake      = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+let food       = { x: 15, y: 10 };
+let direction  = { x: 1, y: 0 };
+let nextDir    = { x: 1, y: 0 };
+let scoreVal   = 0;
+let bestVal    = parseInt(localStorage.getItem('snake_best') || '0');
+let gameState  = 'waiting'; // waiting | playing | paused | over
+let lastTick   = 0;
+let globalTime = 0;
+let jumpTicks    = 0;         // 剩余跳跃 tick
+let jumpCooldown = 0;         // 冷却 tick
+const JUMP_DURATION = 3;
+const JUMP_COOLDOWN = 5;
+const JUMP_HEIGHT = CELL * 1.6;
+
+// 子弹
+let bullet       = null;      // { x, y, dx, dy }
+let bulletMesh   = null;
+let bulletCooldown = 0;
+const BULLET_SPEED = 2.0;     // 每 tick 移动的格数（比蛇快）
+const BULLET_COOLDOWN = 3;    // 冷却 tick
+
+$best.textContent = bestVal;
+
+// ==================== 食物放置 ====================
+function placeFood() {
+  const occupied = new Set([
+    ...snake.map(s => `${s.x},${s.y}`),
+    ...obstacles.map(o => `${o.x},${o.y}`)
+  ]);
+  const free = [];
+  for (let x = 0; x < GRID; x++)
+    for (let y = 0; y < GRID; y++)
+      if (!occupied.has(`${x},${y}`)) free.push({ x, y });
+  if (free.length === 0) return;
+  food = free[Math.floor(Math.random() * free.length)];
+  const wx = (food.x - GRID/2 + 0.5) * CELL;
+  const wz = (food.y - GRID/2 + 0.5) * CELL;
+  foodGroup.position.set(wx, 0, wz);
+  foodGroup.visible = true;
+}
+
+// ==================== 渲染蛇 ====================
+function renderSnake() {
+  // 清理旧 mesh
+  snakeMeshes.forEach(m => scene.remove(m));
+  snakeMeshes.length = 0;
+
+  snake.forEach((seg, i) => {
+    const mesh = createSegment(seg.x, seg.y, i, snake.length);
+    snakeMeshes.push(mesh);
+  });
+}
+
+// ==================== 更新蛇材质（渐变） ====================
+function updateSnakeMaterials() {
+  snakeMeshes.forEach((mesh, i) => {
+    mesh.material = getSnakeMaterial(i, snake.length);
+  });
+}
+
+// ==================== 游戏逻辑 ====================
+function tick() {
+  direction = { ...nextDir };
+
+  // 跳跃冷却递减
+  if (jumpCooldown > 0) jumpCooldown--;
+  if (jumpTicks > 0) jumpTicks--;
+  if (bulletCooldown > 0) bulletCooldown--;
+
+  // 子弹移动
+  if (bullet) {
+    bullet.x += bullet.dx * BULLET_SPEED;
+    bullet.y += bullet.dy * BULLET_SPEED;
+    if (bullet.x < 0 || bullet.x >= GRID || bullet.y < 0 || bullet.y >= GRID) {
+      destroyBullet();
+    } else {
+      const hitIdx = obstacles.findIndex(o =>
+        Math.abs(o.x - bullet.x) < 0.6 && Math.abs(o.y - bullet.y) < 0.6);
+      if (hitIdx >= 0) {
+        const o = obstacles[hitIdx];
+        spawnExplosion((o.x - GRID/2 + 0.5) * CELL, (o.y - GRID/2 + 0.5) * CELL);
+        const oMesh = obstacleMeshes[hitIdx];
+        obstacleGroup.remove(oMesh); oMesh.material.dispose();
+        obstacleMeshes.splice(hitIdx, 1);
+        obstacles.splice(hitIdx, 1);
+        destroyBullet();
+      }
+    }
+    updateBulletMesh();
+  }
+
+  const head = snake[0];
+  const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+
+  // 撞墙
+  if (newHead.x < 0 || newHead.x >= GRID || newHead.y < 0 || newHead.y >= GRID) {
+    endGame(); return;
+  }
+
+  // 撞自己
+  if (snake.some(s => s.x === newHead.x && s.y === newHead.y)) {
+    endGame(); return;
+  }
+
+  // 撞障碍（跳跃中无视）
+  if (jumpTicks <= 0 && obstacles.some(o => o.x === newHead.x && o.y === newHead.y)) {
+    endGame(); return;
+  }
+
+  snake.unshift(newHead);
+
+  // 吃到食物
+  if (newHead.x === food.x && newHead.y === food.y) {
+    scoreVal += 10;
+    $score.textContent = scoreVal;
+    spawnExplosion(
+      (food.x - GRID/2 + 0.5) * CELL,
+      (food.y - GRID/2 + 0.5) * CELL
+    );
+    placeFood();
+    spawnObstaclesForScore();
+    updateSnakeMaterials();
+  } else {
+    snake.pop();
+  }
+
+  renderSnake();
+  updateDirIndicator();
+  updateJumpIndicator();
+  updateBulletIndicator();
+}
+
+function endGame() {
+  gameState = 'over';
+  if (scoreVal > bestVal) {
+    bestVal = scoreVal;
+    localStorage.setItem('snake_best', bestVal);
+    $best.textContent = bestVal;
+  }
+  $overlay.classList.remove('hidden');
+  $overlayMsg.textContent = '游戏结束';
+  $finalScore.textContent = `最终得分 ${scoreVal}`;
+  // 蛇变红
+  snakeMeshes.forEach(m => {
+    m.material = new THREE.MeshStandardMaterial({
+      color: '#ff3333', roughness: 0.2, emissive: '#ff0000', emissiveIntensity: 0.8
+    });
+  });
+}
+
+function resetGame() {
+  snake      = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+  direction  = { x: 1, y: 0 };
+  nextDir    = { x: 1, y: 0 };
+  scoreVal   = 0;
+  $score.textContent = '0';
+  $finalScore.textContent = '';
+
+  // 清理爆炸粒子和障碍
+  explosionParticles.forEach(p => scene.remove(p));
+  explosionParticles.length = 0;
+  clearObstacles();
+
+  jumpTicks = 0;
+  jumpCooldown = 0;
+  destroyBullet();
+  bulletCooldown = 0;
+
+  placeFood();
+  renderSnake();
+  updateDirIndicator();
+  gameState = 'playing';
+  $overlay.classList.add('hidden');
+  lastTick = performance.now();
+}
+
+// ==================== 方向指示器 ====================
+function updateDirIndicator() {
+  Object.values($dirKeys).forEach(k => k.classList.remove('active'));
+  if (direction.x === 0 && direction.y === -1) $dirKeys.up.classList.add('active');
+  if (direction.x === 0 && direction.y ===  1) $dirKeys.down.classList.add('active');
+  if (direction.x === -1 && direction.y === 0) $dirKeys.left.classList.add('active');
+  if (direction.x ===  1 && direction.y === 0) $dirKeys.right.classList.add('active');
+}
+
+function updateJumpIndicator() {
+  const el = document.getElementById('jump-indicator');
+  if (!el) return;
+  el.classList.remove('active');
+  el.style.color = '';
+  el.style.borderColor = '';
+  el.style.boxShadow = '';
+
+  if (jumpTicks > 0) {
+    el.textContent = '⬆';
+    el.classList.add('active');
+    el.style.color = '#ffff00';
+    el.style.borderColor = '#ffff00';
+    el.style.boxShadow = '0 0 16px rgba(255,255,0,0.4)';
+  } else if (jumpCooldown > 0) {
+    el.textContent = jumpCooldown;
+    el.style.color = 'rgba(255,255,255,0.15)';
+    el.style.borderColor = 'rgba(255,255,255,0.08)';
+  } else {
+    el.textContent = 'G';
+    el.style.color = '#ffff00';
+    el.style.borderColor = 'rgba(255,255,0,0.5)';
+    el.style.boxShadow = '0 0 10px rgba(255,255,0,0.2)';
+  }
+}
+
+function updateBulletIndicator() {
+  const el = document.getElementById('bullet-indicator');
+  if (!el) return;
+  if (bulletCooldown > 0) {
+    el.textContent = bulletCooldown;
+    el.style.color = 'rgba(255,255,255,0.15)';
+    el.style.borderColor = 'rgba(255,255,255,0.08)';
+    el.style.boxShadow = 'none';
+  } else {
+    el.textContent = 'B';
+    el.style.color = '#ff8844';
+    el.style.borderColor = 'rgba(255,136,68,0.5)';
+    el.style.boxShadow = '0 0 10px rgba(255,136,68,0.2)';
+  }
+}
+
+function fireBullet() {
+  if (bullet || bulletCooldown > 0) return;
+  const head = snake[0];
+  bullet = {
+    x: head.x + direction.x * 0.5,
+    y: head.y + direction.y * 0.5,
+    dx: direction.x,
+    dy: direction.y
+  };
+  // 创建子弹 mesh
+  const bGeo = new THREE.SphereGeometry(0.3, 8, 8);
+  const bMat = new THREE.MeshBasicMaterial({ color: '#ff8844' });
+  bulletMesh = new THREE.Mesh(bGeo, bMat);
+  bulletMesh.position.set(
+    (bullet.x - GRID/2 + 0.5) * CELL, CELL * 0.45,
+    (bullet.y - GRID/2 + 0.5) * CELL
+  );
+  scene.add(bulletMesh);
+}
+
+function updateBulletMesh() {
+  if (!bullet || !bulletMesh) return;
+  bulletMesh.position.set(
+    (bullet.x - GRID/2 + 0.5) * CELL, CELL * 0.45,
+    (bullet.y - GRID/2 + 0.5) * CELL
+  );
+}
+
+function destroyBullet() {
+  if (bulletMesh) { scene.remove(bulletMesh); bulletMesh.material.dispose(); bulletMesh = null; }
+  bullet = null;
+  bulletCooldown = BULLET_COOLDOWN;
+  updateBulletIndicator();
+}
+
+// ==================== 键盘控制 ====================
+document.addEventListener('keydown', e => {
+  if (gameState === 'waiting') {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+      e.preventDefault();
+      resetGame();
+    }
+    return;
+  }
+
+  if (gameState === 'over') {
+    if (e.code === 'Space' || e.code.startsWith('Arrow')) {
+      e.preventDefault();
+      resetGame();
+    }
+    return;
+  }
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (gameState === 'playing') {
+      gameState = 'paused';
+      $overlay.classList.remove('hidden');
+      $overlayMsg.textContent = '已暂停';
+    } else if (gameState === 'paused') {
+      gameState = 'playing';
+      $overlay.classList.add('hidden');
+      lastTick = performance.now();
+    }
+    return;
+  }
+
+  if (gameState !== 'playing') return;
+
+  const opp = (d1, d2) => d1.x === -d2.x && d1.y === -d2.y;
+  let newDir = null;
+  switch (e.code) {
+    case 'ArrowUp':    newDir = { x: 0, y: -1 }; break;
+    case 'ArrowDown':  newDir = { x: 0, y:  1 }; break;
+    case 'ArrowLeft':  newDir = { x: -1, y: 0 }; break;
+    case 'ArrowRight': newDir = { x:  1, y: 0 }; break;
+    case 'KeyW':       newDir = { x: 0, y: -1 }; break;
+    case 'KeyS':       newDir = { x: 0, y:  1 }; break;
+    case 'KeyA':       newDir = { x: -1, y: 0 }; break;
+    case 'KeyD':       newDir = { x:  1, y: 0 }; break;
+  }
+  if (newDir && !opp(newDir, direction)) {
+    e.preventDefault();
+    nextDir = newDir;
+  }
+
+  // G 键跳跃
+  if (e.code === 'KeyG' && gameState === 'playing' && jumpTicks <= 0 && jumpCooldown <= 0) {
+    e.preventDefault();
+    jumpTicks = JUMP_DURATION;
+    jumpCooldown = JUMP_COOLDOWN;
+    updateJumpIndicator();
+  }
+
+  // B 键射击
+  if (e.code === 'KeyB' && gameState === 'playing') {
+    e.preventDefault();
+    fireBullet();
+  }
+});
+
+// ==================== 渲染循环 ====================
+function animate(timestamp) {
+  requestAnimationFrame(animate);
+
+  globalTime = timestamp * 0.001;
+
+  // 食物动画
+  if (foodGroup.visible) {
+    foodMesh.rotation.y += 0.02;
+    foodMesh.position.y = CELL * 0.45 + Math.sin(globalTime * 3) * 0.12;
+    ringMesh.rotation.z += 0.015;
+    ringMesh.position.y = foodMesh.position.y;
+    ringMesh.scale.setScalar(1 + Math.sin(globalTime * 2.5) * 0.1);
+    particlesRing.rotation.y += 0.01;
+    particlesRing.position.y = foodMesh.position.y;
+  }
+
+  // 爆炸粒子
+  const dt = Math.min((timestamp - lastTick) / 1000, 0.1);
+  for (let i = explosionParticles.length - 1; i >= 0; i--) {
+    const p = explosionParticles[i];
+    p.userData.life -= dt;
+    if (p.userData.life <= 0) {
+      scene.remove(p);
+      p.geometry.dispose();
+      p.material.dispose();
+      explosionParticles.splice(i, 1);
+    } else {
+      p.position.x += p.userData.vx * dt;
+      p.position.y += p.userData.vy * dt;
+      p.position.z += p.userData.vz * dt;
+      p.userData.vy -= 8 * dt;
+      p.material.opacity = p.userData.life * 2;
+      p.scale.setScalar(p.userData.life * 2);
+    }
+  }
+
+  // 蛇身呼吸 + 跳跃抬高
+  const isJumping = jumpTicks > 0;
+  const jumpBaseY = isJumping ? JUMP_HEIGHT : CELL * 0.25;
+  snakeMeshes.forEach((m, i) => {
+    const targetY = jumpBaseY + Math.sin(globalTime * 4 + i * 0.5) * 0.04;
+    m.position.y += (targetY - m.position.y) * 0.3;
+  });
+
+  // 游戏 tick
+  if (gameState === 'playing' && timestamp - lastTick >= getTickMs()) {
+    lastTick = timestamp;
+    tick();
+  }
+
+  // 边框呼吸
+  borderLine.material.opacity = 0.3 + Math.sin(globalTime * 1.5) * 0.1;
+
+  // 点光源微动
+  pointLight.intensity = 28 + Math.sin(globalTime * 2) * 2;
+
+  renderer.render(scene, camera);
+}
+
+// ==================== 响应式 ====================
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// ==================== 启动 ====================
+placeFood();
+foodGroup.visible = true;
+renderSnake();
+updateDirIndicator();
+$overlay.classList.remove('hidden');
+$overlayMsg.textContent = '按 空格键 或 方向键 开始';
+$best.textContent = bestVal;
+lastTick = performance.now();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

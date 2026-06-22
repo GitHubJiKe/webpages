@@ -36,7 +36,7 @@
                 "animation": "animate__fadeInUp",
                 "images": [
                     {
-                        "src": "./before.jpg",
+                        "src": "./b efore.jpg",
                         "style": "width: 200px; height: auto; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"
                     }
                 ]
