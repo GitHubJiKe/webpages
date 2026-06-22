@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>飞扬的小鸟 - WebGL Flappy Bird</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    overflow: hidden;
+    font-family: 'Segoe UI', 'PingFang SC', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    height: 100vh; width: 100vw;
+  }
+  #game-container {
+    width: 100vw; height: 100vh;
+    position: relative;
+    cursor: pointer;
+  }
+  canvas { display: block; }
+
+  /* HUD */
+  #score-display {
+    position: absolute;
+    top: 30px; left: 0; right: 0;
+    text-align: center;
+    font-size: 64px; font-weight: 900;
+    color: #fff;
+    text-shadow: 4px 4px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+    pointer-events: none; z-index: 10;
+    line-height: 1;
+  }
+
+  /* 开始/结束浮层 */
+  #overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    pointer-events: none; z-index: 20;
+  }
+  #title {
+    font-size: 48px; font-weight: 900;
+    color: #fff;
+    text-shadow: 4px 4px 0 #000;
+    margin-bottom: 6px;
+  }
+  #subtitle {
+    font-size: 18px; color: rgba(255,255,255,0.8);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  @keyframes blink {
+    0%,100% { opacity:1; } 50% { opacity:0.3; }
+  }
+
+  #gameover-panel {
+    display: none; flex-direction: column; align-items: center;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 24px;
+    padding: 44px 60px;
+    border: 2px solid rgba(255,255,255,0.15);
+  }
+  #gameover-panel h2 {
+    font-size: 36px; color: #e74c3c; margin-bottom: 6px;
+    text-shadow: 2px 2px 0 #000;
+  }
+  #gameover-panel .medal { font-size: 60px; margin-bottom: 8px; }
+  #gameover-panel .final-score {
+    font-size: 56px; font-weight: 900; color: #ffd700;
+    text-shadow: 2px 2px 0 #000; margin-bottom: 2px;
+  }
+  #gameover-panel .best-score {
+    font-size: 18px; color: rgba(255,255,255,0.55); margin-bottom: 28px;
+  }
+  #restart-btn {
+    pointer-events: auto;
+    background: #ffd700; color: #1a1a2e;
+    border: none; padding: 16px 50px;
+    border-radius: 32px; font-size: 20px; font-weight: 800;
+    cursor: pointer; letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  #restart-btn:hover { transform: scale(1.06); box-shadow: 0 4px 28px rgba(255,215,0,0.5); }
+  #restart-btn:active { transform: scale(0.95); }
+
+  @media (max-width: 800px) {
+    #score-display { font-size: 42px; top: 16px; }
+    #title { font-size: 32px; }
+    #gameover-panel { padding: 30px 36px; }
+    #gameover-panel h2 { font-size: 26px; }
+    #gameover-panel .final-score { font-size: 40px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+  <div id="score-display">0</div>
+  <div id="overlay">
+    <div id="title">🐤 飞扬的小鸟</div>
+    <div id="subtitle">点击屏幕 / 按空格键 开始游戏</div>
+    <div id="gameover-panel">
+      <div class="medal"></div>
+      <h2>游戏结束</h2>
+      <div class="final-score" id="final-score">0</div>
+      <div class="best-score" id="best-score-text">最高分: 0</div>
+      <button id="restart-btn">再来一局 🔄</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ==================== DOM ====================
+const container = document.getElementById('game-container');
+const scoreEl = document.getElementById('score-display');
+const titleEl = document.getElementById('title');
+const subtitleEl = document.getElementById('subtitle');
+const gameoverPanel = document.getElementById('gameover-panel');
+const finalScoreEl = document.getElementById('final-score');
+const bestScoreTextEl = document.getElementById('best-score-text');
+const restartBtn = document.getElementById('restart-btn');
+
+// ==================== Three.js Setup ====================
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(container.clientWidth, container.clientHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.setClearColor(0x4ec0ca);
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x4ec0ca);
+scene.fog = new THREE.Fog(0x4ec0ca, 15, 45);
+
+// 正交相机 — 高度固定，宽度随浏览器
+const VIEW_HEIGHT = 10;
+let aspect = container.clientWidth / container.clientHeight;
+let VIEW_WIDTH = VIEW_HEIGHT * aspect;
+const camera = new THREE.OrthographicCamera(
+  VIEW_WIDTH / -2, VIEW_WIDTH / 2,
+  VIEW_HEIGHT / 2, VIEW_HEIGHT / -2,
+  0.1, 50
+);
+camera.position.set(0, 0, 10);
+camera.lookAt(0, 0, 0);
+
+// 灯光
+scene.add(new THREE.AmbientLight(0xffeedd, 1.8));
+const sun = new THREE.DirectionalLight(0xffffff, 3.5);
+sun.position.set(3, 10, 6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 0.5; sun.shadow.camera.far = 40;
+sun.shadow.camera.left = -20; sun.shadow.camera.right = 20;
+sun.shadow.camera.top = 12; sun.shadow.camera.bottom = -12;
+sun.shadow.bias = -0.0003;
+scene.add(sun);
+
+// ==================== 游戏常量 ====================
+let HALF_W = VIEW_WIDTH / 2;
+let HALF_H = VIEW_HEIGHT / 2;
+let GROUND_Y, CEILING_Y;
+
+function updateConstants() {
+  HALF_W = VIEW_WIDTH / 2;
+  HALF_H = VIEW_HEIGHT / 2;
+  GROUND_Y = -HALF_H + 0.9;
+  CEILING_Y = HALF_H - 0.6;
+}
+
+const GRAVITY = 12;
+const FLAP_FORCE = 5.8;
+const PIPE_SPEED = 2.8;
+const PIPE_WIDTH = 1.3;
+const PIPE_GAP = 5.2;
+const PIPE_SPAWN_INTERVAL = 1.3;
+const BIRD_X = -VIEW_WIDTH * 0.28;
+const BIRD_RADIUS = 0.4;
+
+// ==================== 游戏状态 ====================
+let gameState = 'IDLE';
+let score = 0, bestScore = parseInt(localStorage.getItem('flappyBest')) || 0;
+let birdY = 0, birdVy = 0;
+let birdGroup = null, wingMesh = null;
+let flapTimer = 0, birdRotation = 0;
+let pipes = [], particles = [];
+let pipeSpawnTimer = 0;
+let groundTiles = [], bgElements = [];
+let scrollOffset = 0, frameCount = 0;
+
+// ==================== 材质缓存 ====================
+const mats = {};
+function mat(c, p = {}) {
+  const k = `${c}-${JSON.stringify(p)}`;
+  return mats[k] || (mats[k] = new THREE.MeshStandardMaterial({ color: c, roughness: 0.55, metalness: 0.03, ...p }));
+}
+
+// ==================== 场景元素 ====================
+
+function buildSkyBg() {
+  const g = new THREE.Group();
+
+  // 远山
+  for (let i = 0; i < 8; i++) {
+    const geo = new THREE.SphereGeometry(2 + Math.random() * 3.5, 16, 8, 0, Math.PI * 2, 0, Math.PI / 3.5);
+    const hill = new THREE.Mesh(geo, mat(
+      new THREE.Color().setHSL(0.4 + Math.random() * 0.2, 0.5, 0.5 + Math.random() * 0.35).getHex(),
+      { roughness: 0.8, metalness: 0 }
+    ));
+    hill.position.set(-HALF_W - 3 + i * (VIEW_WIDTH + 6) / 8, GROUND_Y - 0.2, -3 - Math.random() * 2);
+    hill.scale.set(1, 0.3 + Math.random() * 0.45, 0.55);
+    hill.receiveShadow = true;
+    g.add(hill);
+    bgElements.push({ m: hill, s: 0.12 + Math.random() * 0.12 });
+  }
+
+  // 云
+  for (let i = 0; i < 10; i++) {
+    const cg = new THREE.Group();
+    const cm = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0 });
+    [0.7, 0.9, 0.5, 0.6, 0.4].forEach((s, j) => {
+      const blob = new THREE.Mesh(new THREE.SphereGeometry(s, 8, 6), cm);
+      blob.position.set(j * 0.4 - 0.85, (j % 2) * 0.18, 0);
+      cg.add(blob);
+    });
+    cg.position.set(-HALF_W - 4 + Math.random() * (VIEW_WIDTH + 8), HALF_H - 1.5 - Math.random() * 3.5, -2 - Math.random() * 2);
+    cg.scale.setScalar(0.5 + Math.random() * 0.9);
+    g.add(cg);
+    bgElements.push({ m: cg, s: 0.06 + Math.random() * 0.07 });
+  }
+  return g;
+}
+
+function buildGround() {
+  const g = new THREE.Group();
+
+  // 地面主体
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(VIEW_WIDTH + 4, 2, 2.5),
+    mat(0x8B6914, { roughness: 0.65, metalness: 0.05 })
+  );
+  base.position.set(0, GROUND_Y - 1, 0);
+  base.receiveShadow = true; base.castShadow = true;
+  g.add(base);
+
+  // 草地表面
+  const grass = new THREE.Mesh(
+    new THREE.BoxGeometry(VIEW_WIDTH + 4, 0.25, 2.55),
+    mat(0x5da83a, { roughness: 0.5 })
+  );
+  grass.position.set(0, GROUND_Y + 0.1, 0.05);
+  grass.receiveShadow = true;
+  g.add(grass);
+
+  // 装饰条纹瓦片
+  const TW = 3.5;
+  const count = Math.ceil(VIEW_WIDTH / TW) + 4;
+  for (let i = 0; i < count; i++) {
+    const tile = new THREE.Mesh(
+      new THREE.BoxGeometry(TW - 0.06, 0.1, 0.03),
+      mat(i % 2 === 0 ? 0x6db84a : 0x4e9830, { roughness: 0.45 })
+    );
+    tile.position.set(-HALF_W - 3 + i * TW, GROUND_Y + 0.22, 1.28);
+    g.add(tile);
+    groundTiles.push({ m: tile, x: tile.position.x, w: TW });
+  }
+  return g;
+}
+
+// ==================== 小鸟模型 — 真正的鸟 ====================
+function buildBird() {
+  const g = new THREE.Group();
+  const bodyDepth = 0.45;
+  const sc = 0.55;
+
+  // ===== 身体剪影 =====
+  const bodyShape = new THREE.Shape();
+  // 从头顶开始，顺时针勾勒鸟的侧影
+  bodyShape.moveTo(0.4 * sc, 0.48 * sc);
+  // 头部 → 上喙
+  bodyShape.bezierCurveTo(0.55 * sc, 0.5 * sc, 0.68 * sc, 0.35 * sc, 0.7 * sc, 0.2 * sc);
+  bodyShape.lineTo(0.95 * sc, 0.1 * sc);
+  // 喙尖 → 下喙 → 喉咙
+  bodyShape.lineTo(0.78 * sc, -0.02 * sc);
+  bodyShape.bezierCurveTo(0.62 * sc, -0.08 * sc, 0.48 * sc, -0.15 * sc, 0.38 * sc, -0.25 * sc);
+  // 腹部弧线
+  bodyShape.bezierCurveTo(0.22 * sc, -0.38 * sc, 0.0 * sc, -0.46 * sc, -0.18 * sc, -0.42 * sc);
+  bodyShape.bezierCurveTo(-0.32 * sc, -0.35 * sc, -0.4 * sc, -0.22 * sc, -0.46 * sc, -0.1 * sc);
+  // 尾部下面
+  bodyShape.bezierCurveTo(-0.55 * sc, -0.05 * sc, -0.68 * sc, -0.02 * sc, -0.78 * sc, 0.0 * sc);
+  // 尾尖
+  bodyShape.lineTo(-0.72 * sc, 0.06 * sc);
+  // 尾部上面 → 背部
+  bodyShape.bezierCurveTo(-0.55 * sc, 0.18 * sc, -0.4 * sc, 0.28 * sc, -0.22 * sc, 0.35 * sc);
+  bodyShape.bezierCurveTo(-0.05 * sc, 0.4 * sc, 0.15 * sc, 0.45 * sc, 0.32 * sc, 0.47 * sc);
+  // 回到头顶
+  bodyShape.bezierCurveTo(0.35 * sc, 0.48 * sc, 0.38 * sc, 0.48 * sc, 0.4 * sc, 0.48 * sc);
+
+  const bodyGeo = new THREE.ExtrudeGeometry(bodyShape, {
+    depth: bodyDepth, bevelEnabled: true,
+    bevelThickness: 0.06, bevelSize: 0.06, bevelSegments: 6
+  });
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.15, metalness: 0.04 });
+  const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+  bodyMesh.position.z = -bodyDepth / 2;
+  bodyMesh.castShadow = true;
+  bodyMesh.receiveShadow = true;
+  g.add(bodyMesh);
+
+  // ===== 浅色肚子 =====
+  const bellyShape = new THREE.Shape();
+  const bs = sc * 0.72;
+  bellyShape.moveTo(-0.05 * bs, -0.38 * bs);
+  bellyShape.bezierCurveTo(-0.22 * bs, -0.32 * bs, -0.32 * bs, -0.18 * bs, -0.3 * bs, -0.05 * bs);
+  bellyShape.bezierCurveTo(-0.22 * bs, 0.05 * bs, -0.05 * bs, 0.1 * bs, 0.1 * bs, 0.06 * bs);
+  bellyShape.bezierCurveTo(0.22 * bs, -0.02 * bs, 0.3 * bs, -0.15 * bs, 0.25 * bs, -0.28 * bs);
+  bellyShape.bezierCurveTo(0.15 * bs, -0.38 * bs, 0.0 * bs, -0.4 * bs, -0.05 * bs, -0.38 * bs);
+
+  const bellyGeo = new THREE.ExtrudeGeometry(bellyShape, {
+    depth: 0.05, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02
+  });
+  const bellyMat = new THREE.MeshStandardMaterial({ color: 0xfff8dc, roughness: 0.3 });
+  const bellyMesh = new THREE.Mesh(bellyGeo, bellyMat);
+  bellyMesh.position.set(0.06 * sc, -0.08 * sc, bodyDepth / 2 + 0.02);
+  g.add(bellyMesh);
+
+  // ===== 翅膀 =====
+  const wingShape = new THREE.Shape();
+  const ws = sc * 0.55;
+  wingShape.moveTo(0, 0.05 * ws);
+  wingShape.bezierCurveTo(0.1 * ws, -0.25 * ws, 0.4 * ws, -0.38 * ws, 0.6 * ws, -0.2 * ws);
+  wingShape.bezierCurveTo(0.55 * ws, -0.05 * ws, 0.3 * ws, 0.06 * ws, 0.0 * ws, 0.1 * ws);
+  wingShape.bezierCurveTo(-0.05 * ws, 0.08 * ws, -0.02 * ws, 0.06 * ws, 0, 0.05 * ws);
+
+  const wingGeo = new THREE.ExtrudeGeometry(wingShape, {
+    depth: 0.06, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02
+  });
+  const wingMat = new THREE.MeshStandardMaterial({ color: 0xe6a800, roughness: 0.2 });
+  const wing = new THREE.Mesh(wingGeo, wingMat);
+  wing.position.set(-0.05 * sc, 0.02 * sc, bodyDepth / 2 + 0.06);
+  wing.castShadow = true;
+  wing.name = 'wing';
+  g.add(wing);
+  wingMesh = wing;
+
+  // 翅膀条纹
+  for (let i = 0; i < 3; i++) {
+    const stripeGeo = new THREE.BoxGeometry(0.05 * sc, 0.02 * sc, 0.08);
+    const stripe = new THREE.Mesh(stripeGeo, new THREE.MeshStandardMaterial({ color: 0xcc8800, roughness: 0.25 }));
+    stripe.position.set(0.25 * ws * (i + 1) / 3, -0.12 * ws - i * 0.1 * ws, 0.04);
+    stripe.rotation.z = -0.25;
+    wing.add(stripe);
+  }
+
+  // ===== 大眼睛 =====
+  const eyeWGeo = new THREE.SphereGeometry(0.14 * sc, 20, 20);
+  const eyeW = new THREE.Mesh(eyeWGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.03 }));
+  eyeW.position.set(0.5 * sc, 0.32 * sc, bodyDepth / 2 + 0.08);
+  g.add(eyeW);
+
+  const pupilGeo = new THREE.SphereGeometry(0.07 * sc, 12, 12);
+  const pupil = new THREE.Mesh(pupilGeo, new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.03 }));
+  pupil.position.set(0.54 * sc, 0.3 * sc, bodyDepth / 2 + 0.14);
+  g.add(pupil);
+
+  // 眼睛高光
+  const hlGeo = new THREE.SphereGeometry(0.03 * sc, 8, 8);
+  const hl = new THREE.Mesh(hlGeo, new THREE.MeshStandardMaterial({
+    color: 0xffffff, roughness: 0.01, emissive: 0xffffff, emissiveIntensity: 0.4
+  }));
+  hl.position.set(0.56 * sc, 0.34 * sc, bodyDepth / 2 + 0.16);
+  g.add(hl);
+
+  // ===== 腮红 =====
+  const blushGeo = new THREE.SphereGeometry(0.06 * sc, 10, 10);
+  const blushMat = new THREE.MeshStandardMaterial({ color: 0xff8866, roughness: 0.4, transparent: true, opacity: 0.5 });
+  const blush = new THREE.Mesh(blushGeo, blushMat);
+  blush.position.set(0.42 * sc, 0.2 * sc, bodyDepth / 2 + 0.08);
+  blush.scale.set(0.6, 0.8, 0.3);
+  g.add(blush);
+
+  return g;
+}
+
+// ==================== 管道 ====================
+function buildPipe(gapCenterY) {
+  const g = new THREE.Group();
+  const pipeM = new THREE.MeshStandardMaterial({ color: 0x5cb85c, roughness: 0.35, metalness: 0.06 });
+  const pd = 0.6;
+  const halfGap = PIPE_GAP / 2;
+
+  // 上半截管道 — 干净切面，无帽檐
+  const topBarH = 0.3; // 管口细条装饰
+  const topStart = gapCenterY + halfGap;
+  const topH = CEILING_Y + 0.7 - topStart;
+  const topCY = topStart + topH / 2;
+  const topP = new THREE.Mesh(new THREE.BoxGeometry(PIPE_WIDTH, topH, pd), pipeM);
+  topP.position.y = topCY;
+  topP.castShadow = true; topP.receiveShadow = true;
+  g.add(topP);
+
+  // 上半管口细条（视觉收口，但不影响碰撞）
+  const topBar = new THREE.Mesh(new THREE.BoxGeometry(PIPE_WIDTH + 0.1, topBarH, pd + 0.05),
+    new THREE.MeshStandardMaterial({ color: 0x4a9e4a, roughness: 0.3, metalness: 0.1 }));
+  topBar.position.y = topStart - topBarH / 2;
+  topBar.castShadow = true;
+  g.add(topBar);
+
+  // 下半截管道
+  const botEnd = gapCenterY - halfGap;
+  const botH = botEnd - (GROUND_Y + 1.7);
+  const botCY = GROUND_Y + 1.7 + botH / 2;
+  const botP = new THREE.Mesh(new THREE.BoxGeometry(PIPE_WIDTH, botH, pd), pipeM);
+  botP.position.y = botCY;
+  botP.castShadow = true; botP.receiveShadow = true;
+  g.add(botP);
+
+  // 下半管口细条
+  const botBar = new THREE.Mesh(new THREE.BoxGeometry(PIPE_WIDTH + 0.1, topBarH, pd + 0.05),
+    new THREE.MeshStandardMaterial({ color: 0x4a9e4a, roughness: 0.3, metalness: 0.1 }));
+  botBar.position.y = botEnd + topBarH / 2;
+  botBar.castShadow = true;
+  g.add(botBar);
+
+  g.position.x = HALF_W + 1.5;
+  return g;
+}
+
+// ==================== 粒子 ====================
+function emit(pos, color, n = 12, f = 3.5) {
+  for (let i = 0; i < n; i++) {
+    const s = 0.04 + Math.random() * 0.09;
+    const geo = new THREE.BoxGeometry(s, s, s);
+    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+      color: new THREE.Color(color).offsetHSL((Math.random() - 0.5) * 0.08, 0, (Math.random() - 0.5) * 0.2),
+      roughness: 0.4, transparent: true, opacity: 1
+    }));
+    mesh.position.copy(pos).add(new THREE.Vector3((Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4, 0));
+    scene.add(mesh);
+    particles.push({
+      m: mesh,
+      vx: (Math.random() - 0.5) * f * 2.2,
+      vy: (Math.random() - 0.2) * f * 2.2,
+      vz: (Math.random() - 0.5) * f,
+      life: 0.4 + Math.random() * 0.7,
+      rs: (Math.random() - 0.5) * 14
+    });
+  }
+}
+
+function tickParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= dt;
+    if (p.life <= 0) { scene.remove(p.m); p.m.geometry.dispose(); p.m.material.dispose(); particles.splice(i, 1); continue; }
+    p.vy -= GRAVITY * dt * 0.5;
+    p.m.position.x += p.vx * dt;
+    p.m.position.y += p.vy * dt;
+    p.m.rotation.z += p.rs * dt;
+    const s = Math.max(0.01, p.life / 0.9);
+    p.m.scale.setScalar(s);
+    p.m.material.opacity = Math.min(1, p.life * 1.8);
+  }
+}
+
+// ==================== 逻辑 ====================
+function flap() { birdVy = FLAP_FORCE; flapTimer = 0.14; emit(birdGroup.position.clone().add(new THREE.Vector3(-0.4, -0.2, 0)), 0xffffff, 5, 1.5); }
+
+function die() {
+  gameState = 'DEAD';
+  emit(birdGroup.position.clone(), 0xffd700, 28, 7);
+  emit(birdGroup.position.clone(), 0xff6b35, 12, 4);
+  if (score > bestScore) { bestScore = score; localStorage.setItem('flappyBest', bestScore); }
+  setTimeout(() => {
+    let medal = score >= 30 ? '🏆' : score >= 20 ? '🥇' : score >= 10 ? '🥈' : score >= 5 ? '🥉' : '';
+    gameoverPanel.querySelector('.medal').textContent = medal;
+    finalScoreEl.textContent = score;
+    bestScoreTextEl.textContent = `最高分: ${bestScore}`;
+    titleEl.style.display = 'none';
+    subtitleEl.style.display = 'none';
+    gameoverPanel.style.display = 'flex';
+  }, 550);
+}
+
+function checkHit() {
+  const bx = BIRD_X, by = birdY, r = BIRD_RADIUS * 0.7;
+  if (by + r >= CEILING_Y || by - r <= GROUND_Y) return true;
+  for (const p of pipes) {
+    if (p.passed) continue;
+    const px = p.g.position.x, hw = PIPE_WIDTH / 2 + r;
+    if (bx + r > px - hw && bx - r < px + hw) {
+      // 管道间隙内是安全的，间隙外碰到管道即死亡
+      const hg = PIPE_GAP / 2;
+      if (by + r > p.gapY + hg || by - r < p.gapY - hg) return true;
+    }
+  }
+  return false;
+}
+
+function scorePopup(pos) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshStandardMaterial({
+    color: 0xffd700, roughness: 0.1, emissive: 0xffd700, emissiveIntensity: 0.9, transparent: true
+  }));
+  m.position.copy(pos);
+  scene.add(m);
+  particles.push({ m, vx: 0, vy: 2.5, vz: 0, life: 0.55, rs: 6 });
+}
+
+// ==================== 重置 ====================
+function rebuildScene() {
+  // 清除旧场景
+  [bgElements, groundTiles, pipes, particles].forEach(arr => {
+    arr.forEach(item => {
+      const obj = item.m || item.g || item.group;
+      if (obj) {
+        obj.traverse(c => { if (c.geometry && c !== obj) c.geometry.dispose(); if (c.material) (Array.isArray(c.material) ? c.material : [c.material]).forEach(m => m.dispose()); });
+        scene.remove(obj);
+      }
+    });
+    arr.length = 0;
+  });
+  // 清除小鸟
+  if (birdGroup) {
+    birdGroup.traverse(c => { if (c.geometry && c !== birdGroup) c.geometry.dispose(); if (c.material) (Array.isArray(c.material) ? c.material : [c.material]).forEach(m => m.dispose()); });
+    scene.remove(birdGroup);
+  }
+
+  // 重建
+  scene.add(buildSkyBg());
+  scene.add(buildGround());
+  birdGroup = buildBird();
+  birdGroup.position.set(BIRD_X, 0, 0);
+  scene.add(birdGroup);
+  wingMesh = birdGroup.getObjectByName('wing');
+}
+
+function resetGame() {
+  pipes.forEach(p => { p.g.traverse(c => { if (c.geometry) c.geometry.dispose(); if (c.material) [].concat(c.material).forEach(m => m.dispose()); }); scene.remove(p.g); });
+  pipes = [];
+  particles.forEach(p => { scene.remove(p.m); p.m.geometry.dispose(); p.m.material.dispose(); });
+  particles = [];
+  score = 0; birdY = 0; birdVy = 0; flapTimer = 0; birdRotation = 0; pipeSpawnTimer = 0; scrollOffset = 0; frameCount = 0;
+  birdGroup.position.set(BIRD_X, 0, 0); birdGroup.rotation.z = 0;
+  if (wingMesh) wingMesh.rotation.z = 0;
+  groundTiles.forEach((t, i) => { t.x = -HALF_W - 3 + i * t.w; t.m.position.x = t.x; });
+  scoreEl.textContent = '0';
+  gameState = 'IDLE';
+  titleEl.style.display = 'block';
+  subtitleEl.style.display = 'block';
+  subtitleEl.textContent = '点击屏幕 / 按空格键 开始';
+  gameoverPanel.style.display = 'none';
+}
+
+// ==================== 主循环 ====================
+const clock = new THREE.Clock();
+
+function update(dt) {
+  dt = Math.min(dt, 0.05);
+  updateConstants();
+  const birdXpos = -VIEW_WIDTH * 0.28;
+
+  if (gameState === 'IDLE') {
+    birdY = Math.sin(frameCount * 0.045) * 0.3;
+    birdGroup.position.set(birdXpos, birdY, 0);
+    birdGroup.rotation.z = Math.sin(frameCount * 0.065) * 0.1;
+    if (wingMesh) wingMesh.rotation.z = Math.sin(frameCount * 0.12) * 0.25;
+  }
+
+  if (gameState === 'PLAYING') {
+    birdVy -= GRAVITY * dt;
+    birdY += birdVy * dt;
+    birdRotation += (THREE.MathUtils.clamp(birdVy * 0.14, -0.55, 0.85) - birdRotation) * 12 * dt;
+    birdGroup.rotation.z = birdRotation;
+    birdGroup.position.set(birdXpos, birdY, 0);
+
+    if (flapTimer > 0) {
+      flapTimer -= dt;
+      if (wingMesh) wingMesh.rotation.z = Math.sin((flapTimer / 0.14) * Math.PI) * 1.3;
+    } else if (wingMesh) {
+      wingMesh.rotation.z += (-0.08 - wingMesh.rotation.z) * 9 * dt;
+    }
+
+    pipeSpawnTimer -= dt;
+    if (pipeSpawnTimer <= 0) {
+      pipeSpawnTimer = PIPE_SPAWN_INTERVAL + (Math.random() - 0.5) * 0.45;
+      const minG = GROUND_Y + PIPE_GAP / 2 + 1.4;
+      const maxG = CEILING_Y - PIPE_GAP / 2 - 1.4;
+      const gapY = minG + Math.random() * (maxG - minG);
+      const pg = buildPipe(gapY);
+      scene.add(pg);
+      pipes.push({ g: pg, gapY, passed: false });
+    }
+
+    for (let i = pipes.length - 1; i >= 0; i--) {
+      const p = pipes[i];
+      p.g.position.x -= PIPE_SPEED * dt;
+      if (!p.passed && p.g.position.x + PIPE_WIDTH / 2 < birdXpos - BIRD_RADIUS) {
+        p.passed = true; score++; scoreEl.textContent = score;
+        scorePopup(new THREE.Vector3(birdXpos + 1.5, birdY + 1, 0));
+      }
+      if (p.g.position.x < -HALF_W - 3) {
+        p.g.traverse(c => { if (c.geometry) c.geometry.dispose(); if (c.material) [].concat(c.material).forEach(m => m.dispose()); });
+        scene.remove(p.g); pipes.splice(i, 1);
+      }
+    }
+
+    scrollOffset += PIPE_SPEED * dt;
+    groundTiles.forEach(t => { t.x -= PIPE_SPEED * dt; if (t.x < -HALF_W - 3 - t.w) t.x += groundTiles.length * t.w; t.m.position.x = t.x; });
+    bgElements.forEach(e => { e.m.position.x -= PIPE_SPEED * e.s * dt; if (e.m.position.x < -HALF_W - 5) e.m.position.x += VIEW_WIDTH + 8; });
+
+    if (checkHit()) die();
+  }
+
+  if (gameState === 'DEAD') {
+    if (birdY - BIRD_RADIUS > GROUND_Y) {
+      birdVy -= GRAVITY * dt; birdY += birdVy * dt;
+      if (birdY - BIRD_RADIUS <= GROUND_Y) { birdY = GROUND_Y + BIRD_RADIUS; birdVy = 0; }
+      birdGroup.position.set(birdXpos, birdY, 0);
+      birdGroup.rotation.z += (0.95 - birdGroup.rotation.z) * 7 * dt;
+    }
+    const rem = PIPE_SPEED * Math.max(0, 1 - (frameCount - 60) * 0.018) * dt;
+    if (rem > 0.005) groundTiles.forEach(t => { t.x -= rem; if (t.x < -HALF_W - 3 - t.w) t.x += groundTiles.length * t.w; t.m.position.x = t.x; });
+  }
+
+  tickParticles(dt);
+  frameCount++;
+}
+
+function loop() {
+  requestAnimationFrame(loop);
+  update(clock.getDelta());
+  renderer.render(scene, camera);
+}
+
+// ==================== 输入 ====================
+function input(e) {
+  e.preventDefault();
+  if (gameState === 'IDLE') {
+    gameState = 'PLAYING'; birdY = 0; birdVy = 0; birdRotation = 0; score = 0;
+    scoreEl.textContent = '0'; pipeSpawnTimer = 0.5;
+    titleEl.style.display = 'none'; subtitleEl.style.display = 'none'; gameoverPanel.style.display = 'none';
+    flap(); return;
+  }
+  if (gameState === 'PLAYING') { flap(); return; }
+  if (gameState === 'DEAD' && gameoverPanel.style.display === 'flex') resetGame();
+}
+
+renderer.domElement.addEventListener('click', input);
+renderer.domElement.addEventListener('touchstart', e => { e.preventDefault(); input(e); }, { passive: false });
+window.addEventListener('keydown', e => { if (['Space', 'ArrowUp', 'KeyW'].includes(e.code)) { e.preventDefault(); input(e); } });
+restartBtn.addEventListener('click', e => { e.stopPropagation(); resetGame(); });
+
+// ==================== 响应式 ====================
+function onResize() {
+  const w = container.clientWidth, h = container.clientHeight;
+  renderer.setSize(w, h);
+  aspect = w / h;
+  VIEW_WIDTH = VIEW_HEIGHT * aspect;
+  camera.left = VIEW_WIDTH / -2;
+  camera.right = VIEW_WIDTH / 2;
+  camera.top = VIEW_HEIGHT / 2;
+  camera.bottom = VIEW_HEIGHT / -2;
+  camera.updateProjectionMatrix();
+  rebuildScene();
+  // 重新定位小鸟
+  birdGroup.position.set(-VIEW_WIDTH * 0.28, gameState === 'IDLE' ? birdY : birdY, 0);
+}
+window.addEventListener('resize', onResize);
+
+// ==================== 启动 ====================
+updateConstants();
+rebuildScene();
+scoreEl.textContent = '0';
+gameoverPanel.style.display = 'none';
+requestAnimationFrame(loop);
+
+console.log('🐤 Flappy Bird WebGL 已就绪');
+console.log('🖱️ 点击/空格键 控制小鸟飞行');
+console.log('🚧 躲避绿色管道！');
+</script>
+</body>
+</html>
