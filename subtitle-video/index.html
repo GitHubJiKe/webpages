@@ -37,14 +37,19 @@
 
     /* 视频背景 */
     #bg-video {
-      position: fixed; inset: 0;
-      width: 100%; height: 100%;
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
       z-index: 0;
       opacity: 0;
       transition: opacity 0.6s ease;
     }
-    #bg-video.active { opacity: 1; }
+
+    #bg-video.active {
+      opacity: 1;
+    }
 
     /* ========== 舞台：flex 布局，根据图片位置切换方向 ========== */
     #stage {
@@ -250,9 +255,6 @@
       }
 
       const CONFIG = {
-        sentenceDuration: 2800,
-        sentenceGap: 400,
-        pageTransition: 800,
         imageDelay: 1000,        // 图片比文字晚出现/消失的毫秒数
         defaultAnimIn: 'animate__fadeInUp',
         defaultAnimOut: 'animate__fadeOut',
@@ -266,14 +268,12 @@
       let pages = [];
       let pageIndex = 0;
       let sentIndex = 0;
-      let isPlaying = true;
-      let timer = null;
       let imgTimer = null;       // 图片延迟定时器
       let activeImgSentence = null; // 当前正在展示图片的句子索引
 
       // ==================== 加载数据 ====================
       try {
-        const res = await fetch('./data.json');
+        const res = await fetch('./script.json');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         pages = await res.json();
         if (!Array.isArray(pages) || pages.length === 0) throw new Error('数据为空');
@@ -296,7 +296,7 @@
         if (isVideoUrl(bg)) {
           $bgVideo.src = bg;
           $bgVideo.classList.add('active');
-          $bgVideo.play().catch(() => {});
+          $bgVideo.play().catch(() => { });
         } else if (/\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i.test(bg || '')) {
           $stage.classList.add('bg-image');
           $stage.style.backgroundImage = `url(${bg})`;
@@ -430,86 +430,69 @@
       // ==================== 翻页 ====================
       function goToPage(idx) {
         if (idx < 0 || idx >= totalPages()) return;
-        clearTimeout(timer);
         clearImageTimer();
-        timer = null;
 
         exitPage(() => {
           pageIndex = idx;
           sentIndex = 0;
           renderBg(getPage(pageIndex));
           showSentence(pageIndex, sentIndex);
-          if (isPlaying) scheduleNext();
         });
       }
 
-      // ==================== 调度 ====================
-      function scheduleNext() {
-        clearTimeout(timer);
+      // ==================== 手动导航 ====================
+      function nextSentence() {
         const sents = getPage(pageIndex).sentences;
-        const cur = sents[sentIndex];
-        const dur = cur.duration ?? CONFIG.sentenceDuration;
-        const gap = cur.gap ?? CONFIG.sentenceGap;
-
-        timer = setTimeout(() => {
-          if (sentIndex < sents.length - 1) {
-            sentIndex++;
-            showSentence(pageIndex, sentIndex);
-            if (isPlaying) scheduleNext();
-          } else if (pageIndex < totalPages() - 1) {
-            setTimeout(() => {
-              goToPage(pageIndex + 1);
-              if (isPlaying) scheduleNext();
-            }, CONFIG.pageTransition);
-          } else {
-            isPlaying = false;
-          }
-        }, dur + gap);
-      }
-
-      // ==================== 播放控制 ====================
-      function togglePlay() {
-        const lastPage = totalPages() - 1;
-        if (pageIndex === lastPage && sentIndex >= totalSents(pageIndex) - 1 && !isPlaying) {
-          goToPage(0);
-          isPlaying = true;
-          scheduleNext();
-          return;
+        if (sentIndex < sents.length - 1) {
+          sentIndex++;
+          showSentence(pageIndex, sentIndex);
+        } else if (pageIndex < totalPages() - 1) {
+          goToPage(pageIndex + 1);
         }
-        isPlaying = !isPlaying;
-        if (isPlaying) scheduleNext();
-        else clearTimeout(timer);
       }
 
-      function resetAll() {
-        clearTimeout(timer);
-        clearImageTimer();
-        timer = null;
-        isPlaying = true;
-        goToPage(0);
-        scheduleNext();
+      function prevSentence() {
+        if (sentIndex > 0) {
+          const els = $area.querySelectorAll('.sentence:not(.is-exiting)');
+          if (els.length > 0) {
+            const last = els[els.length - 1];
+            last.classList.add('is-exiting');
+            const animOut = last.dataset.animOut || CONFIG.defaultAnimOut;
+            animOut.split(' ').forEach(c => last.classList.add(c));
+            setTimeout(() => last.remove(), 400);
+          }
+          sentIndex--;
+          hideImages();
+          activeImgSentence = null;
+
+          const sent = getPage(pageIndex).sentences[sentIndex];
+          if (sent && sent.images && sent.images.length) {
+            activeImgSentence = sentIndex;
+            showImages(sent.images, sent.images[0].position || 'right');
+          }
+          updateTiers();
+        } else if (pageIndex > 0) {
+          goToPage(pageIndex - 1);
+          const prevSents = getPage(pageIndex).sentences;
+          sentIndex = prevSents.length - 1;
+          for (let i = 1; i <= sentIndex; i++) {
+            showSentence(pageIndex, i);
+          }
+        }
       }
 
       // ==================== 快捷键 ====================
       document.addEventListener('keydown', e => {
         switch (e.code) {
-          case 'Space': e.preventDefault(); togglePlay(); break;
-          case 'ArrowRight':
-            e.preventDefault();
-            if (pageIndex < totalPages() - 1) { goToPage(pageIndex + 1); if (isPlaying) scheduleNext(); }
-            break;
-          case 'ArrowLeft':
-            e.preventDefault();
-            if (pageIndex > 0) { goToPage(pageIndex - 1); if (isPlaying) scheduleNext(); }
-            break;
-          case 'KeyR': e.preventDefault(); resetAll(); break;
+          case 'ArrowRight': e.preventDefault(); nextSentence(); break;
+          case 'ArrowLeft': e.preventDefault(); prevSentence(); break;
+          case 'KeyR': e.preventDefault(); goToPage(0); break;
         }
       });
 
       // ==================== 启动 ====================
       goToPage(0);
-      scheduleNext();
-      console.log('Subtitle Video 就绪 · 图文分栏模式 · 空格=暂停 ←→=翻页 R=重置');
+      console.log('Subtitle Video 就绪 · 手动模式 · →=下一句 ←=上一句 R=重置');
     })();
   </script>
 </body>
